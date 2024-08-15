@@ -1,0 +1,13 @@
+﻿services:
+  jobhunter.worker:
+    image: jobhunter.worker
+    build:
+      context: .
+      dockerfile: JobHunter.Worker/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+networks:
+  microservices_net:
+    driver: bridge
+    name: microservices_net
