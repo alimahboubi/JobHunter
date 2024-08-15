@@ -1,0 +1,30 @@
+﻿using JobHunter.Domain.Job.Services;
+using JobHunter.Infrastructure.Linkedin.Configurations;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using PuppeteerSharp;
+using PuppeteerSharp.BrowserData;
+
+namespace JobHunter.Infrastructure.Linkedin;
+
+public static class StartupExtension
+{
+    public static IServiceCollection AddCrawlerService(this IServiceCollection services)
+    {
+        services.AddScoped<JobSearchCrawler>();
+        services.AddScoped<JobDescriptionCrawler>();
+        services.AddScoped<IJobCrawlerService, JobCrawlerService>();
+        return services;
+    }
+
+    public static IServiceCollection AddLinkedinHttpClient(this IServiceCollection services, LinkedinConfiguration configuration)
+    {
+        services.AddHttpClient(nameof(LinkedinConfiguration),
+            client =>
+            {
+                client.BaseAddress = new Uri(configuration.JobSearchBaseUrl);
+                client.DefaultRequestHeaders.Add("User-Agent",configuration.UserAgent);
+            });
+        return services;
+    }
+}
