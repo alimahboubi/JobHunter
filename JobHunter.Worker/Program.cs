@@ -41,7 +41,10 @@ builder.Services.AddQuartz(q =>
         .ForJob(jobKey)
         .WithIdentity("JobCrawling-trigger")
         //This Cron interval can be described as "run every minute" (when second is zero)
-        .WithCronSchedule(backgroundJobConfigurations.CronJob)
+        .WithSimpleSchedule(x => x
+            .RepeatForever()
+            .WithIntervalInMinutes(backgroundJobConfigurations.RepeatInterval)
+        )
     );
 });
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
