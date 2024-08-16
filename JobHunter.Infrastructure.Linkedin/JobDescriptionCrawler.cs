@@ -61,7 +61,7 @@ namespace JobHunter.Infrastructure.Linkedin
         {
             await page.GotoAsync(url, new PageGotoOptions
             {
-                Timeout = 2000,
+                Timeout = 5000,
                 WaitUntil = WaitUntilState.NetworkIdle
             });
             await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode,new PageWaitForSelectorOptions
