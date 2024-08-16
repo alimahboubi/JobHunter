@@ -16,14 +16,15 @@ public class JobCrawlerService(
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
     {
-        var tasks = targetPositionDto.TargetLocations.Select(location =>
-                GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
-                    targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.JobCategory,
-                    ct))
-            .ToList();
-
-        var results = await Task.WhenAll(tasks);
-        return results.SelectMany(result => result).ToList();
+        var results = new List<JobResultDto>();
+        foreach (var location in targetPositionDto.TargetLocations)
+        {
+            var fetchedJob = await GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
+                targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.JobCategory,
+                ct);
+            results.AddRange(fetchedJob);
+        }
+        return results;
     }
 
     private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
@@ -36,7 +37,7 @@ public class JobCrawlerService(
 
             if (!jobs.Any())
                 return jobResults;
-            
+
             foreach (var jobCardDto in jobs)
             {
                 try
@@ -69,6 +70,7 @@ public class JobCrawlerService(
 
         return jobResults;
     }
+
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)
     {
         return new JobResultDto
