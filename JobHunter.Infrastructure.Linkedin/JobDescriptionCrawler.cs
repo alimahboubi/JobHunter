@@ -8,10 +8,12 @@ using Microsoft.Playwright;
 
 namespace JobHunter.Infrastructure.Linkedin
 {
-    public class JobDescriptionCrawler(ILogger<JobDescriptionCrawler> logger, PlaywrightConfigurations playwrightConfigurations)
+    public class JobDescriptionCrawler(
+        ILogger<JobDescriptionCrawler> logger,
+        PlaywrightConfigurations playwrightConfigurations)
     {
         private const int MaxAttempts = 5;
-        private int _delay = 3000;
+        private int _delay = 1000;
 
         public async Task<JobDescriptionResultDto> FetchDescriptionAsync(string url, JobCategory jobCategory)
         {
@@ -38,7 +40,7 @@ namespace JobHunter.Infrastructure.Linkedin
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
             var page = await browser.NewPageAsync();
-            
+
             await NavigateToPageAsync(page, url);
 
             var jobDescription = await GetDescriptionAsync(page);
@@ -59,9 +61,13 @@ namespace JobHunter.Infrastructure.Linkedin
         {
             await page.GotoAsync(url, new PageGotoOptions
             {
+                Timeout = 2000,
                 WaitUntil = WaitUntilState.NetworkIdle
             });
-            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode);
+            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode,new PageWaitForSelectorOptions
+            {
+                Timeout = _delay
+            });
         }
 
         private static async Task<string> GetSeniorityLevelAsync(IPage page)
@@ -94,9 +100,9 @@ namespace JobHunter.Infrastructure.Linkedin
 
         private void AdjustDelay()
         {
-            if (_delay < 10000)
+            if (_delay < 5000)
             {
-                _delay += 2000;
+                _delay += 1000;
             }
         }
     }
