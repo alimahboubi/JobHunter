@@ -1,9 +1,6 @@
 ﻿using JobHunter.Domain.Job.Services;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using PuppeteerSharp;
-using PuppeteerSharp.BrowserData;
 
 namespace JobHunter.Infrastructure.Linkedin;
 

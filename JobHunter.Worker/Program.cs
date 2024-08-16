@@ -21,6 +21,10 @@ var userBackgroundJobSettings = new UserBackgroundJobSettings();
 builder.Configuration.GetSection(nameof(UserBackgroundJobSettings)).Bind(userBackgroundJobSettings);
 builder.Services.AddSingleton(userBackgroundJobSettings);
 
+var playwrightConfigurations = new PlaywrightConfigurations();
+builder.Configuration.GetSection(nameof(PlaywrightConfigurations)).Bind(playwrightConfigurations);
+builder.Services.AddSingleton(playwrightConfigurations);
+
 builder.Services.AddCrawlerService()
     .AddLinkedinHttpClient(linkedinConfiguration);
 
