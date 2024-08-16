@@ -4,10 +4,17 @@ using Quartz;
 namespace JobHunter.Worker.Jobs;
 
 [DisallowConcurrentExecution]
-public class BackgroundJobWorker(IBackgroundJobService backgroundJobService) : IJob
+public class BackgroundJobWorker(IBackgroundJobService backgroundJobService,ILogger<BackgroundJobWorker>logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        await backgroundJobService.Execute(context.CancellationToken);
+        try
+        {
+            await backgroundJobService.Execute(context.CancellationToken);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e,"JobFailed");
+        }
     }
 }

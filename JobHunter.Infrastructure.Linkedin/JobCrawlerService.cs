@@ -4,8 +4,6 @@ using JobHunter.Domain.Job.Services;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
-using PuppeteerSharp;
-using PuppeteerSharp.BrowserData;
 
 namespace JobHunter.Infrastructure.Linkedin;
 
@@ -38,25 +36,27 @@ public class JobCrawlerService(
 
             if (!jobs.Any())
                 return jobResults;
-
-            await using var browser = await LaunchBrowserAsync();
-
+            
             foreach (var jobCardDto in jobs)
             {
-                var jobDescription =
-                    await jobDescriptionCrawler.FetchDescriptionAsync(browser, jobCardDto.Url, jobCategory);
-                if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
+                try
                 {
-                    continue;
+                    var jobDescription =
+                        await jobDescriptionCrawler.FetchDescriptionAsync(jobCardDto.Url, jobCategory);
+                    if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
+                    {
+                        continue;
+                    }
+
+                    jobResults.Add(CreateJobResultDto(jobCardDto, jobDescription));
+                }
+                catch (JobDescriptionCrawlerException ex)
+                {
+                    logger.LogError(ex, "Job Description failed to handle");
                 }
 
-                jobResults.Add(CreateJobResultDto(jobCardDto, jobDescription));
-                await Task.Delay(3000);
+                await Task.Delay(1000, ct);
             }
-        }
-        catch (JobDescriptionCrawlerException ex)
-        {
-            logger.LogError(ex, "Job Description failed to handle");
         }
         catch (JobSearchCrawlerException ex)
         {
@@ -69,17 +69,6 @@ public class JobCrawlerService(
 
         return jobResults;
     }
-
-    private async Task<IBrowser> LaunchBrowserAsync()
-    {
-        await new BrowserFetcher().DownloadAsync(Chrome.DefaultBuildId);
-        return await Puppeteer.LaunchAsync(new LaunchOptions
-        {
-            Headless = true,
-            Timeout = 60000
-        });
-    }
-
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)
     {
         return new JobResultDto

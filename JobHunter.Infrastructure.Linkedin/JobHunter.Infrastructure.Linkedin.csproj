@@ -10,7 +10,7 @@
       <PackageReference Include="HtmlAgilityPack" Version="1.11.63" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-      <PackageReference Include="PuppeteerSharp" Version="18.1.0" />
+      <PackageReference Include="Microsoft.Playwright" Version="1.46.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     </ItemGroup>
 

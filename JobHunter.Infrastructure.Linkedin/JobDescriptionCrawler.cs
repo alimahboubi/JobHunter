@@ -1,26 +1,25 @@
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
-using PuppeteerSharp;
-using System.Threading.Tasks;
 using JobHunter.Domain.Job.Constants;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
+using Microsoft.Playwright;
 
 namespace JobHunter.Infrastructure.Linkedin
 {
-    public class JobDescriptionCrawler(ILogger<JobDescriptionCrawler> logger)
+    public class JobDescriptionCrawler(ILogger<JobDescriptionCrawler> logger, PlaywrightConfigurations playwrightConfigurations)
     {
         private const int MaxAttempts = 5;
         private int _delay = 3000;
 
-        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(IBrowser browser, string url, JobCategory jobCategory)
+        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(string url, JobCategory jobCategory)
         {
             for (int attempts = 0; attempts < MaxAttempts; attempts++)
             {
                 try
                 {
-                    return await TryFetchDescriptionAsync(browser, url, jobCategory);
+                    return await TryFetchDescriptionAsync(url, jobCategory);
                 }
                 catch (Exception ex)
                 {
@@ -33,10 +32,13 @@ namespace JobHunter.Infrastructure.Linkedin
             throw new JobDescriptionCrawlerException(url);
         }
 
-        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(IBrowser browser, string url,
+        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(string url,
             JobCategory jobCategory)
         {
-            await using var page = await browser.NewPageAsync();
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
+            var page = await browser.NewPageAsync();
+            
             await NavigateToPageAsync(page, url);
 
             var jobDescription = await GetDescriptionAsync(page);
@@ -55,20 +57,22 @@ namespace JobHunter.Infrastructure.Linkedin
 
         private async Task NavigateToPageAsync(IPage page, string url)
         {
-            await page.GoToAsync(url, new NavigationOptions { WaitUntil = new[] { WaitUntilNavigation.Networkidle0 } });
-            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode,
-                new WaitForSelectorOptions { Timeout = _delay, Visible = true });
+            await page.GotoAsync(url, new PageGotoOptions
+            {
+                WaitUntil = WaitUntilState.NetworkIdle
+            });
+            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode);
         }
 
         private static async Task<string> GetSeniorityLevelAsync(IPage page)
         {
-            return await page.EvaluateExpressionAsync<string>(
+            return await page.EvaluateAsync<string>(
                 "document.querySelector('.description__job-criteria-text').innerText") ?? "N/A";
         }
 
         private static async Task<string> GetDescriptionAsync(IPage page)
         {
-            return await page.EvaluateExpressionAsync<string>(
+            return await page.EvaluateAsync<string>(
                 "document.querySelector('.description__text--rich').innerText") ?? "N/A";
         }
 
