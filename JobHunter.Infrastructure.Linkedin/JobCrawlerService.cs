@@ -1,17 +1,19 @@
+using System.Diagnostics;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Domain.Job.Services;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin;
 
 public class JobCrawlerService(
     JobDescriptionCrawler jobDescriptionCrawler,
     JobSearchCrawler jobSearchCrawler,
-    ILogger<JobCrawlerService> logger)
-    : IJobCrawlerService
+    ILogger<JobCrawlerService> logger,
+    Tracer tracer) : IJobCrawlerService
 {
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
@@ -30,6 +32,8 @@ public class JobCrawlerService(
     private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
         List<string> keywords, List<string> criticalKeywords, JobCategory jobCategory, CancellationToken ct)
     {
+        using var jobLocationSpan = tracer.StartActiveSpan("GetJobsForLocationAsync");
+        jobLocationSpan.SetAttribute("Location", location);
         var jobResults = new List<JobResultDto>();
         try
         {
@@ -61,10 +65,12 @@ public class JobCrawlerService(
         }
         catch (JobSearchCrawlerException ex)
         {
+            jobLocationSpan.SetStatus(Status.Error);
             logger.LogError(ex, "Job Search failed to handle");
         }
         catch (Exception ex)
         {
+            jobLocationSpan.SetStatus(Status.Error);
             logger.LogError(ex, "Get Jobs For Location failed");
         }
 

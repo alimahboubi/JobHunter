@@ -5,12 +5,14 @@ using JobHunter.Domain.Job.Constants;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
 using Microsoft.Playwright;
+using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin
 {
     public class JobDescriptionCrawler(
         ILogger<JobDescriptionCrawler> logger,
-        PlaywrightConfigurations playwrightConfigurations)
+        PlaywrightConfigurations playwrightConfigurations,
+        Tracer tracer)
     {
         private const int MaxAttempts = 5;
         private int _delay = 1000;
@@ -19,12 +21,16 @@ namespace JobHunter.Infrastructure.Linkedin
         {
             for (int attempts = 0; attempts < MaxAttempts; attempts++)
             {
+                using var fetchDescriptionAsyncSpan = tracer.StartActiveSpan("FetchDescriptionAsync");
+                fetchDescriptionAsyncSpan.SetAttribute("url", url);
+                fetchDescriptionAsyncSpan.SetAttribute("attempts", attempts);
                 try
                 {
                     return await TryFetchDescriptionAsync(url, jobCategory);
                 }
                 catch (Exception ex)
                 {
+                    fetchDescriptionAsyncSpan.SetStatus(Status.Error);
                     logger.LogWarning(ex, "Attempt {Attempt}: Failed to fetch job description from URL: {Url}",
                         attempts + 1, url);
                     AdjustDelay();
@@ -64,7 +70,7 @@ namespace JobHunter.Infrastructure.Linkedin
                 Timeout = 5000,
                 WaitUntil = WaitUntilState.NetworkIdle
             });
-            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode,new PageWaitForSelectorOptions
+            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode, new PageWaitForSelectorOptions
             {
                 Timeout = _delay
             });

@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\JobHunter.Domain\JobHunter.Domain.csproj" />
+      <ProjectReference Include="..\JobHunter.Framework.Observability\JobHunter.Framework.Observability.csproj" />
     </ItemGroup>
     
 </Project>
