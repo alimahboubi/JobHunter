@@ -2,9 +2,11 @@ using System.Diagnostics;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Domain.Job.Services;
+using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Playwright;
 using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin;
@@ -13,7 +15,8 @@ public class JobCrawlerService(
     JobDescriptionCrawler jobDescriptionCrawler,
     JobSearchCrawler jobSearchCrawler,
     ILogger<JobCrawlerService> logger,
-    Tracer tracer) : IJobCrawlerService
+    Tracer tracer,
+    PlaywrightConfigurations playwrightConfigurations) : IJobCrawlerService
 {
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
@@ -26,6 +29,7 @@ public class JobCrawlerService(
                 ct);
             results.AddRange(fetchedJob);
         }
+
         return results;
     }
 
@@ -41,13 +45,20 @@ public class JobCrawlerService(
 
             if (!jobs.Any())
                 return jobResults;
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
+            if (!browser.IsConnected)
+            {
+                logger.LogError("Failed to Connect browser");
+                return jobResults;
+            }
 
             foreach (var jobCardDto in jobs)
             {
                 try
                 {
                     var jobDescription =
-                        await jobDescriptionCrawler.FetchDescriptionAsync(jobCardDto.Url, jobCategory);
+                        await jobDescriptionCrawler.FetchDescriptionAsync(browser, jobCardDto.Url, jobCategory);
                     if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
                         continue;
@@ -55,7 +66,7 @@ public class JobCrawlerService(
 
                     jobResults.Add(CreateJobResultDto(jobCardDto, jobDescription));
                 }
-                catch (JobDescriptionCrawlerException ex)
+                catch (Exception ex)
                 {
                     logger.LogError(ex, "Job Description failed to handle");
                 }
