@@ -94,7 +94,7 @@ public static class TelemetryConfigurations
                     opt.AddElasticsearchClientInstrumentation();
                 }
                 
-                if (tracingConfig.IsElasticSearchClientTraceEnabled)
+                if (tracingConfig.IsQuartzTraceEnabled)
                 {
                     opt.AddQuartzInstrumentation();
                 }
@@ -200,6 +200,11 @@ public static class TelemetryConfigurations
                             o.Endpoint = new Uri(config.OpenTelemetry.Logging.OtlpExporterEndpoint);
                             o.Headers = config.OpenTelemetry.Logging.OtlpExporterHeaders;
                         });
+                    }
+
+                    if (config.OpenTelemetry.Logging.UseConsoleExplorer)
+                    {
+                        opt.AddConsoleExporter();
                     }
 
                     opt.SetResourceBuilder(resourceBuilder);

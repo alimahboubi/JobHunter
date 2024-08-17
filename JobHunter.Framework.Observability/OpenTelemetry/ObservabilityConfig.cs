@@ -4,7 +4,7 @@ public class ObservabilityConfig : ServiceConfig
 {
     public OpenTelemetryConfig? OpenTelemetry { get; set; }
 
-    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+    public IEnumerable<KeyValuePair<string, object>>? AdditionalAttributes { get; set; }
 }
 
 public class OpenTelemetryConfig
@@ -59,6 +59,8 @@ public class OpenTelemetryLoggingConfig
     public string? OtlpExporterEndpoint { get; set; }
     
     public string? OtlpExporterHeaders { get; set; }
+    
+    public bool UseConsoleExplorer { get; set; }
 
     public bool IncludeFormattedMessage { get; set; }
 

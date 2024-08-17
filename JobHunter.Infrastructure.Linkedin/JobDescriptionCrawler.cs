@@ -11,13 +11,12 @@ namespace JobHunter.Infrastructure.Linkedin
 {
     public class JobDescriptionCrawler(
         ILogger<JobDescriptionCrawler> logger,
-        PlaywrightConfigurations playwrightConfigurations,
         Tracer tracer)
     {
         private const int MaxAttempts = 5;
         private int _delay = 1000;
 
-        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(string url, JobCategory jobCategory)
+        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(IBrowser browser,string url, JobCategory jobCategory)
         {
             for (int attempts = 0; attempts < MaxAttempts; attempts++)
             {
@@ -26,7 +25,7 @@ namespace JobHunter.Infrastructure.Linkedin
                 fetchDescriptionAsyncSpan.SetAttribute("attempts", attempts);
                 try
                 {
-                    return await TryFetchDescriptionAsync(url, jobCategory);
+                    return await TryFetchDescriptionAsync(browser,url, jobCategory);
                 }
                 catch (Exception ex)
                 {
@@ -40,11 +39,9 @@ namespace JobHunter.Infrastructure.Linkedin
             throw new JobDescriptionCrawlerException(url);
         }
 
-        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(string url,
+        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(IBrowser browser,string url,
             JobCategory jobCategory)
         {
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
             var page = await browser.NewPageAsync();
 
             await NavigateToPageAsync(page, url);
