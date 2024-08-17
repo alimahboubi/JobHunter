@@ -4,13 +4,15 @@ using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
+using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin
 {
     public class JobSearchCrawler(
         LinkedinConfiguration linkedinConfiguration,
         ILogger<JobSearchCrawler> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        Tracer tracer)
     {
         private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(LinkedinConfiguration));
 
@@ -64,6 +66,7 @@ namespace JobHunter.Infrastructure.Linkedin
 
         private HtmlNodeCollection ParseJobCards(string pageContents,string location)
         {
+            using var parsJobSpan = tracer.StartActiveSpan("parsJobSpan");
             var htmlDocument = new HtmlDocument();
             htmlDocument.LoadHtml(pageContents);
 

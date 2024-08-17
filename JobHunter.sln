@@ -21,6 +21,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobHunter.Framework.Observability", "JobHunter.Framework.Observability\JobHunter.Framework.Observability.csproj", "{9D22C4FA-37D4-4E8C-9749-7826E4B86F05}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{13B7AD8E-F477-4AE7-8C97-C842237183B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +51,10 @@ Global
 		{2ABADDEC-6C20-477E-A786-D183AF084E64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2ABADDEC-6C20-477E-A786-D183AF084E64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2ABADDEC-6C20-477E-A786-D183AF084E64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D22C4FA-37D4-4E8C-9749-7826E4B86F05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D22C4FA-37D4-4E8C-9749-7826E4B86F05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D22C4FA-37D4-4E8C-9749-7826E4B86F05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D22C4FA-37D4-4E8C-9749-7826E4B86F05}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A364D1B7-BCEE-41B4-867E-03B603CD6F0F} = {F7412E36-D0DF-45A8-9269-1F35599F21B9}
@@ -56,5 +64,6 @@ Global
 		{F9B8D84B-9F55-4C6A-B502-15C310EA1F63} = {1FCBC021-DF6D-4755-97FB-3B647E694252}
 		{68221E1B-E1F6-41B7-AF14-4094039DB1D7} = {1DE3692C-ED19-4C50-B6CB-1CEDFB9F3219}
 		{2ABADDEC-6C20-477E-A786-D183AF084E64} = {1FCBC021-DF6D-4755-97FB-3B647E694252}
+		{9D22C4FA-37D4-4E8C-9749-7826E4B86F05} = {13B7AD8E-F477-4AE7-8C97-C842237183B1}
 	EndGlobalSection
 EndGlobal

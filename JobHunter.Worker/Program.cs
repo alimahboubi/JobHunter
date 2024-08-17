@@ -2,12 +2,19 @@ using JobHunter.Infrastructure.Persistent.Postgres;
 using JobHunter.Application.Services;
 using JobHunter.Domain.Job.Configurations;
 using JobHunter.Domain.Job.Services;
+using JobHunter.Framework.Observability.OpenTelemetry;
 using JobHunter.Infrastructure.Linkedin;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Worker.Jobs;
+using OpenTelemetry.Trace;
 using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var telemetryConfig = new ObservabilityConfig();
+builder.Configuration.GetSection(nameof(ObservabilityConfig)).Bind(telemetryConfig);
+builder.Services.AddSingleton(telemetryConfig);
+builder.Services.AddOpenTelemetryServices(telemetryConfig);
 
 var linkedinConfiguration = new LinkedinConfiguration();
 builder.Configuration.GetSection(nameof(LinkedinConfiguration)).Bind(linkedinConfiguration);
@@ -33,6 +40,7 @@ builder.Services.AddRepositories()
     .AddJobHunterDbContext(connectionString);
 
 builder.Services.AddScoped<IBackgroundJobService, BackgroundJobService>();
+builder.Services.AddSingleton(TracerProvider.Default.GetTracer(telemetryConfig.ServiceName));
 
 
 builder.Services.AddQuartz(q =>
@@ -52,8 +60,7 @@ builder.Services.AddQuartz(q =>
     );
 });
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
+builder.Host.UseOpenTelemetryServices(telemetryConfig);
 var app = builder.Build();
-
 
 await app.RunAsync();
