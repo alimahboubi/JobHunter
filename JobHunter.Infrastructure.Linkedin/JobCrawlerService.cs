@@ -40,16 +40,9 @@ public class JobCrawlerService(
         try
         {
             var jobs = await jobSearchCrawler.SearchJobResultsAsync(location, positionName, keywords, ct);
-
+            jobLocationSpan.SetAttribute("job count", jobs.Count);
             if (!jobs.Any())
                 return jobResults;
-            /*using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
-            if (!browser.IsConnected)
-            {
-                logger.LogError("Failed to Connect browser");
-                return jobResults;
-            }*/
 
             foreach (var jobCardDto in jobs)
             {
