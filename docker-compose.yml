@@ -4,8 +4,6 @@
     build:
       context: .
       dockerfile: JobHunter.Worker/Dockerfile
-    depends_on:
-      - playwright
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
     networks:
