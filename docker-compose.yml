@@ -10,13 +10,6 @@
       - ASPNETCORE_ENVIRONMENT=Production
     networks:
       - microservices_net
-  
-  playwright:
-    image: jacoblincool/playwright:firefox-server
-    ports:
-      - 53333:53333
-    networks:
-      - microservices_net
 
 networks:
   microservices_net:

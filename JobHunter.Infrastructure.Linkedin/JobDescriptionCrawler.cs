@@ -1,56 +1,85 @@
+using HtmlAgilityPack;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
 using JobHunter.Domain.Job.Constants;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
-using Microsoft.Playwright;
 using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin
 {
     public class JobDescriptionCrawler(
         ILogger<JobDescriptionCrawler> logger,
+        IHttpClientFactory httpClientFactory,
         Tracer tracer)
     {
-        private const int MaxAttempts = 5;
-        private int _delay = 1000;
+        private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
-        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(IBrowser browser,string url, JobCategory jobCategory)
+        private const int MaxRetries = 5;
+        private int _delay = 3000;
+
+        public async Task<JobDescriptionResultDto> SearchJobResultsAsync(string url, JobCategory jobCategory,
+            CancellationToken ct = default)
         {
-            for (int attempts = 0; attempts < MaxAttempts; attempts++)
+            try
             {
-                using var fetchDescriptionAsyncSpan = tracer.StartActiveSpan("FetchDescriptionAsync");
-                fetchDescriptionAsyncSpan.SetAttribute("url", url);
-                fetchDescriptionAsyncSpan.SetAttribute("attempts", attempts);
+                var jobPage = await FetchJobSearchPageContentAsync(url,ct);
+                if (string.IsNullOrEmpty(jobPage))
+                    throw new Exception("Failed to fetch job page content.");
+
+                return TryParseDescription(url, jobPage, jobCategory);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while searching for job results.");
+                throw;
+            }
+        }
+
+
+        private async Task<string> FetchJobSearchPageContentAsync(string url, CancellationToken ct = default)
+        {
+            int retries = 0;
+            _httpClient.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
+
+            while (retries < MaxRetries)
+            {
                 try
                 {
-                    return await TryFetchDescriptionAsync(browser,url, jobCategory);
+                    var response = await _httpClient.GetAsync(url, ct);
+                    
+                    response.EnsureSuccessStatusCode(); // Throws if not 2xx
+
+                    return await response.Content.ReadAsStringAsync(ct);
                 }
-                catch (Exception ex)
+                catch (HttpRequestException ex)
                 {
-                    fetchDescriptionAsyncSpan.SetStatus(Status.Error);
-                    logger.LogWarning(ex, "Attempt {Attempt}: Failed to fetch job description from URL: {Url}",
-                        attempts + 1, url);
+                    retries++;
                     AdjustDelay();
+                    logger.LogWarning(ex, "Retry {RetryCount}/{MaxRetries} for fetching job search page content",
+                        retries, MaxRetries);
+                    await Task.Delay(_delay, ct);
                 }
             }
 
             throw new JobDescriptionCrawlerException(url);
         }
 
-        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(IBrowser browser,string url,
+        private JobDescriptionResultDto TryParseDescription(string url, string pageDataHtml,
             JobCategory jobCategory)
         {
-            var page = await browser.NewPageAsync();
+            using var span = tracer.StartActiveSpan("TryParseDescription");
+            var htmlDocument = new HtmlDocument();
+            htmlDocument.LoadHtml(pageDataHtml);
 
-            await NavigateToPageAsync(page, url);
 
-            var jobDescription = await GetDescriptionAsync(page);
+            var jobDescription = GetDescriptionAsync(htmlDocument);
             var locationType = GetLocationType(jobDescription);
-            var seniorityLevel = await GetSeniorityLevelAsync(page);
+            var seniorityLevel = GetSeniorityLevelAsync(htmlDocument);
             var keywords = GetKeywords(jobDescription, jobCategory);
-            logger.LogInformation("Description of {url} Successfully Fetched", url);
+            logger.LogInformation("Description of {Url} Successfully Fetched", url);
             return new JobDescriptionResultDto
             {
                 SeniorityLevel = seniorityLevel,
@@ -60,29 +89,14 @@ namespace JobHunter.Infrastructure.Linkedin
             };
         }
 
-        private async Task NavigateToPageAsync(IPage page, string url)
+        private static string GetSeniorityLevelAsync(HtmlDocument htmlDocument)
         {
-            await page.GotoAsync(url, new PageGotoOptions
-            {
-                Timeout = 5000,
-                WaitUntil = WaitUntilState.NetworkIdle
-            });
-            await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode, new PageWaitForSelectorOptions
-            {
-                Timeout = _delay
-            });
+            return htmlDocument.DocumentNode.SelectSingleNode(PageNodes.SeniorityLevelNode).InnerText.Trim() ?? "N/A";
         }
 
-        private static async Task<string> GetSeniorityLevelAsync(IPage page)
+        private static string GetDescriptionAsync(HtmlDocument htmlDocument)
         {
-            return await page.EvaluateAsync<string>(
-                "document.querySelector('.description__job-criteria-text').innerText") ?? "N/A";
-        }
-
-        private static async Task<string> GetDescriptionAsync(IPage page)
-        {
-            return await page.EvaluateAsync<string>(
-                "document.querySelector('.description__text--rich').innerText") ?? "N/A";
+            return htmlDocument.DocumentNode.SelectSingleNode(PageNodes.DescriptionNode).InnerText ?? "N/A";
         }
 
         private static string GetLocationType(string description)
@@ -103,7 +117,7 @@ namespace JobHunter.Infrastructure.Linkedin
 
         private void AdjustDelay()
         {
-            if (_delay < 5000)
+            if (_delay < 6000)
             {
                 _delay += 1000;
             }

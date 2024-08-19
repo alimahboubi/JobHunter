@@ -10,9 +10,8 @@ public class PageNodes
     public const string JobUrlNode = ".//a[contains(@class, 'base-card__full-link')]";
     public const string PostedDateNode = ".//time[contains(@class, 'job-search-card__listdate')]";
     
-    public const string EmploymentTypeNode = "//span[contains(@class, 'description__job-criteria-text') and (text()='Full-time' or text()='Part-time')]";
+    public const string DescriptionNode = "//div[contains(@class, 'description__text') and contains(@class, 'description__text--rich')]";
+    public const string SeniorityLevelNode = "//span[contains(@class, 'description__job-criteria-text')]";
     public const string LocationTypeNode = "//span[contains(@class, 'job-criteria__text') and (text()='Remote' or text()='On-site' or text()='Hybrid')]";
     public const string NumberOfEmployeesNode = "//span[contains(@class, 'num-applicants__caption')]";
-    
-    public const string JobDescriptionNode = ".description__text--rich";
 }
