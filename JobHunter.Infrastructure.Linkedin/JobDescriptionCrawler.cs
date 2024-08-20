@@ -43,7 +43,13 @@ namespace JobHunter.Infrastructure.Linkedin
             JobCategory jobCategory)
         {
             var page = await browser.NewPageAsync();
-
+            await page.Context.AddCookiesAsync(new[] { new Cookie
+                {
+                    Name = "li_at",
+                    Value = "AQEFAHQBAAAAABB-k3oAAAGP33z4GgAAAZF8cNwETgAAF3VybjpsaTptZW1iZXI6MzM4MTk2MjMyoJPDu19zlFstqN-e6nc0blcx7fz3Wg97JUi6g5eltbZdy2rL_A8ugcRJmPB84WVVSEbi6E5KZRDs4jP1UxZtlXdAgTRNMxZXdOBEVsrOKEK7vDZ6M3Nk7g9VGjjZvV8pDHw0jLZMHzEziDOEIPb8OEzypwAX25T09HH_tCScO837rTNL8SgpVyqohRwneaGwvHCvwQ",
+                    Url = url,
+                }
+            });
             await NavigateToPageAsync(page, url);
 
             var jobDescription = await GetDescriptionAsync(page);
