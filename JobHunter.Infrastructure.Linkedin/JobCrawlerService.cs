@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Domain.Job.Services;
@@ -6,7 +5,6 @@ using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Playwright;
 using OpenTelemetry.Trace;
 
 namespace JobHunter.Infrastructure.Linkedin;
@@ -42,23 +40,16 @@ public class JobCrawlerService(
         try
         {
             var jobs = await jobSearchCrawler.SearchJobResultsAsync(location, positionName, keywords, ct);
-
+            jobLocationSpan.SetAttribute("job count", jobs.Count);
             if (!jobs.Any())
                 return jobResults;
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
-            if (!browser.IsConnected)
-            {
-                logger.LogError("Failed to Connect browser");
-                return jobResults;
-            }
 
             foreach (var jobCardDto in jobs)
             {
                 try
                 {
                     var jobDescription =
-                        await jobDescriptionCrawler.FetchDescriptionAsync(browser, jobCardDto.Url, jobCategory);
+                        await jobDescriptionCrawler.SearchJobResultsAsync(jobCardDto.Url, jobCategory);
                     if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
                         continue;
