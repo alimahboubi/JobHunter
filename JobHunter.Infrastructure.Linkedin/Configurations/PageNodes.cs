@@ -14,5 +14,5 @@ public class PageNodes
     public const string LocationTypeNode = "//span[contains(@class, 'job-criteria__text') and (text()='Remote' or text()='On-site' or text()='Hybrid')]";
     public const string NumberOfEmployeesNode = "//span[contains(@class, 'num-applicants__caption')]";
     
-    public const string JobDescriptionNode = ".description__text--rich";
+    public const string JobDescriptionNode = ".job-description";
 }

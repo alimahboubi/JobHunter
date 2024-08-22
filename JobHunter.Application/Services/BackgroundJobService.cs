@@ -28,6 +28,8 @@ public class BackgroundJobService(
                     Enum.TryParse<JobCategory>(userConfiguration.JobTargetSettings.JobCategory, out var jobType);
                 var targetPosition = new TargetPositionDto
                 {
+                    Username = userConfiguration.Username,
+                    Password = userConfiguration.Password,
                     JobTitle = userConfiguration.JobTargetSettings.JobTitle,
                     TargetLocations = userConfiguration.JobTargetSettings.TargetLocations,
                     TargetKeywords = userConfiguration.JobTargetSettings.TargetKeywords,

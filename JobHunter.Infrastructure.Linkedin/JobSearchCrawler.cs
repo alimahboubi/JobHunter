@@ -25,7 +25,7 @@ namespace JobHunter.Infrastructure.Linkedin
                 if (string.IsNullOrEmpty(jobPage))
                     throw new Exception("Failed to fetch job page content.");
 
-                var jobCards = ParseJobCards(jobPage,location);
+                var jobCards = ParseJobCards(jobPage, location);
                 return jobCards.Select(CreateJobCardDto).ToList();
             }
             catch (Exception ex)
@@ -64,7 +64,7 @@ namespace JobHunter.Infrastructure.Linkedin
             throw new JobSearchCrawlerException(location);
         }
 
-        private HtmlNodeCollection ParseJobCards(string pageContents,string location)
+        private HtmlNodeCollection ParseJobCards(string pageContents, string location)
         {
             using var parsJobSpan = tracer.StartActiveSpan("parsJobSpan");
             var htmlDocument = new HtmlDocument();
@@ -100,7 +100,15 @@ namespace JobHunter.Infrastructure.Linkedin
         private string FindCardUrl(HtmlNode htmlContent)
         {
             var node = htmlContent.SelectSingleNode(PageNodes.JobUrlNode);
-            return node?.Attributes["href"]?.Value ?? "N/A";
+            var url = node?.Attributes["href"]?.Value;
+            int questionMarkIndex = url.IndexOf('?');
+
+            if (questionMarkIndex >= 0)
+            {
+                url = url.Substring(0, questionMarkIndex);
+            }
+
+            return url;
         }
 
         private DateTime FindCardDateTime(HtmlNode htmlContent)
