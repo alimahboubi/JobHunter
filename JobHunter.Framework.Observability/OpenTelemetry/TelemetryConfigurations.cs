@@ -98,6 +98,11 @@ public static class TelemetryConfigurations
                 {
                     opt.AddQuartzInstrumentation();
                 }
+                
+                if (tracingConfig.IsEntityFrameWorkTraceEnabled)
+                {
+                    opt.AddEntityFrameworkCoreInstrumentation();
+                }
 
 
                 if (tracingConfig.UseConsoleExplorer)

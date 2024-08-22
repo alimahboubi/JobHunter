@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\JobHunter.Application.Abstraction\JobHunter.Application.Abstraction.csproj" />
         <ProjectReference Include="..\JobHunter.Domain\JobHunter.Domain.csproj"/>
         <ProjectReference Include="..\JobHunter.Framework.Observability\JobHunter.Framework.Observability.csproj"/>
     </ItemGroup>

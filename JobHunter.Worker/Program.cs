@@ -3,8 +3,10 @@ using JobHunter.Application.Services;
 using JobHunter.Domain.Job.Configurations;
 using JobHunter.Domain.Job.Services;
 using JobHunter.Framework.Observability.OpenTelemetry;
+using JobHunter.Infrastructure.Cache.InMemory;
 using JobHunter.Infrastructure.Linkedin;
 using JobHunter.Infrastructure.Linkedin.Configurations;
+using JobHunter.Worker;
 using JobHunter.Worker.Jobs;
 using OpenTelemetry.Trace;
 using Quartz;
@@ -35,6 +37,8 @@ builder.Services.AddSingleton(playwrightConfigurations);
 builder.Services.AddCrawlerService()
     .AddLinkedinHttpClient(linkedinConfiguration);
 
+builder.Services.AddInMemoryCache();
+
 var connectionString = builder.Configuration.GetConnectionString("JobHunter");
 builder.Services.AddRepositories()
     .AddJobHunterDbContext(connectionString);
@@ -63,4 +67,6 @@ builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 builder.Host.UseOpenTelemetryServices(telemetryConfig);
 var app = builder.Build();
 
+var migrator = new DbMigrator(app.Services.GetRequiredService<IServiceScopeFactory>());
+await migrator.StartAsync(app.Lifetime.ApplicationStopping);
 await app.RunAsync();

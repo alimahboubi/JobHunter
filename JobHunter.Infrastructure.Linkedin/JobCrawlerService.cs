@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using JobHunter.Application.Abstraction.Cache;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
 using JobHunter.Domain.Job.Services;
@@ -16,7 +17,8 @@ public class JobCrawlerService(
     JobSearchCrawler jobSearchCrawler,
     ILogger<JobCrawlerService> logger,
     Tracer tracer,
-    PlaywrightConfigurations playwrightConfigurations) : IJobCrawlerService
+    PlaywrightConfigurations playwrightConfigurations,
+    ICacheService cacheService) : IJobCrawlerService
 {
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
@@ -53,6 +55,13 @@ public class JobCrawlerService(
             {
                 try
                 {
+                    if (jobCardDto.Id is not null && cacheService.Get<JobCardDto>(jobCardDto.Id) is not null)
+                    {
+                        continue;
+                    }
+
+                    cacheService.Set(jobCardDto.Id, jobCardDto, new TimeSpan(1, 0, 0, 0));
+
                     var jobDescription =
                         await jobDescriptionCrawler.FetchDescriptionAsync(page, jobCardDto.Url, jobCategory);
                     if (!criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
@@ -103,11 +112,6 @@ public class JobCrawlerService(
     {
         await page.GotoAsync("https://www.linkedin.com/login");
         await page.WaitForSelectorAsync(".login__form");
-        //await page.ClickAsync("button:has-text('Accept')");
-        await page.ScreenshotAsync(new PageScreenshotOptions
-        {
-            Path = "login.jpg"
-        });
 
         // Fill out the login form
         await page.FillAsync("input#username", username);
