@@ -21,10 +21,13 @@ public class JobCrawlerService(
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
     {
+        var page = await InitializePlaywright();
+        await LoginAsync(page, targetPositionDto.Username, targetPositionDto.Password);
+
         var results = new List<JobResultDto>();
         foreach (var location in targetPositionDto.TargetLocations)
         {
-            var fetchedJob = await GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
+            var fetchedJob = await GetJobsForLocationAsync(page, location, targetPositionDto.JobTitle,
                 targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.JobCategory,
                 ct);
             results.AddRange(fetchedJob);
@@ -33,7 +36,7 @@ public class JobCrawlerService(
         return results;
     }
 
-    private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
+    private async Task<List<JobResultDto>> GetJobsForLocationAsync(IPage page, string location, string positionName,
         List<string> keywords, List<string> criticalKeywords, JobCategory jobCategory, CancellationToken ct)
     {
         using var jobLocationSpan = tracer.StartActiveSpan("GetJobsForLocationAsync");
@@ -45,21 +48,14 @@ public class JobCrawlerService(
 
             if (!jobs.Any())
                 return jobResults;
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Firefox.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
-            if (!browser.IsConnected)
-            {
-                logger.LogError("Failed to Connect browser");
-                return jobResults;
-            }
 
-            foreach (var jobCardDto in jobs)
+            foreach (var jobCardDto in jobs.Take(2))
             {
                 try
                 {
                     var jobDescription =
-                        await jobDescriptionCrawler.FetchDescriptionAsync(browser, jobCardDto.Url, jobCategory);
-                    if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
+                        await jobDescriptionCrawler.FetchDescriptionAsync(page, jobCardDto.Url, jobCategory);
+                    if (!criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
                         continue;
                     }
@@ -86,6 +82,42 @@ public class JobCrawlerService(
         }
 
         return jobResults;
+    }
+
+    private async Task<IPage> InitializePlaywright()
+    {
+        var playwright = await Playwright.CreateAsync();
+        var browser = await playwright.Chromium.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
+        var iphone13 = playwright.Devices["iPhone 13"];
+        var context = await browser.NewContextAsync(iphone13);
+        if (!browser.IsConnected)
+        {
+            throw new Exception("Failed to Connect browser");
+        }
+
+        var page = await context.NewPageAsync();
+        return page;
+    }
+
+    private async Task LoginAsync(IPage page, string username, string password)
+    {
+        await page.GotoAsync("https://www.linkedin.com/login");
+        await page.WaitForSelectorAsync(".login__form");
+        //await page.ClickAsync("button:has-text('Accept')");
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = "login.jpg"
+        });
+
+        // Fill out the login form
+        await page.FillAsync("input#username", username);
+        await page.FillAsync("input#password", password);
+
+        // Click the login button
+        await page.ClickAsync("button[type='submit']");
+
+        // Wait for the navigation to complete
+        await page.WaitForNavigationAsync();
     }
 
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)

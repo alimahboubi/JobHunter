@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Models;
 using Microsoft.Extensions.Logging;
@@ -16,7 +18,8 @@ namespace JobHunter.Infrastructure.Linkedin
         private const int MaxAttempts = 5;
         private int _delay = 1000;
 
-        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(IBrowser browser,string url, JobCategory jobCategory)
+        public async Task<JobDescriptionResultDto> FetchDescriptionAsync(IPage page, string url,
+            JobCategory jobCategory)
         {
             for (int attempts = 0; attempts < MaxAttempts; attempts++)
             {
@@ -25,7 +28,7 @@ namespace JobHunter.Infrastructure.Linkedin
                 fetchDescriptionAsyncSpan.SetAttribute("attempts", attempts);
                 try
                 {
-                    return await TryFetchDescriptionAsync(browser,url, jobCategory);
+                    return await TryFetchDescriptionAsync(page, url, jobCategory);
                 }
                 catch (Exception ex)
                 {
@@ -39,17 +42,9 @@ namespace JobHunter.Infrastructure.Linkedin
             throw new JobDescriptionCrawlerException(url);
         }
 
-        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(IBrowser browser,string url,
+        private async Task<JobDescriptionResultDto> TryFetchDescriptionAsync(IPage page, string url,
             JobCategory jobCategory)
         {
-            var page = await browser.NewPageAsync();
-            await page.Context.AddCookiesAsync(new[] { new Cookie
-                {
-                    Name = "li_at",
-                    Value = "AQEFAHQBAAAAABB-k3oAAAGP33z4GgAAAZF8cNwETgAAF3VybjpsaTptZW1iZXI6MzM4MTk2MjMyoJPDu19zlFstqN-e6nc0blcx7fz3Wg97JUi6g5eltbZdy2rL_A8ugcRJmPB84WVVSEbi6E5KZRDs4jP1UxZtlXdAgTRNMxZXdOBEVsrOKEK7vDZ6M3Nk7g9VGjjZvV8pDHw0jLZMHzEziDOEIPb8OEzypwAX25T09HH_tCScO837rTNL8SgpVyqohRwneaGwvHCvwQ",
-                    Url = url,
-                }
-            });
             await NavigateToPageAsync(page, url);
 
             var jobDescription = await GetDescriptionAsync(page);
@@ -81,16 +76,16 @@ namespace JobHunter.Infrastructure.Linkedin
 
         private static async Task<string> GetSeniorityLevelAsync(IPage page)
         {
-            return await page.EvaluateAsync<string>(
-                "document.querySelector('.description__job-criteria-text').innerText") ?? "N/A";
+            /*var seniorityLevelElementHandle = await page.WaitForSelectorAsync(".meta-data");
+            return await seniorityLevelElementHandle.InnerTextAsync();*/
+            return "";
         }
 
-        private static async Task<string> GetDescriptionAsync(IPage page)
+        private async Task<string> GetDescriptionAsync(IPage page)
         {
-            return await page.EvaluateAsync<string>(
-                "document.querySelector('.description__text--rich').innerText") ?? "N/A";
+            var jobDescriptionElementHandle = await page.WaitForSelectorAsync(PageNodes.JobDescriptionNode);
+            return await jobDescriptionElementHandle.TextContentAsync();
         }
-
         private static string GetLocationType(string description)
         {
             if (description.Contains("remote")) return "Remote";

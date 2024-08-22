@@ -12,7 +12,7 @@
       - microservices_net
   
   playwright:
-    image: jacoblincool/playwright:firefox-server
+    image: jacoblincool/playwright:chromium-server-1.46.0
     ports:
       - 53333:53333
     networks:
