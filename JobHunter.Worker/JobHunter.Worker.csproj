@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\JobHunter.Framework.Observability\JobHunter.Framework.Observability.csproj" />
+      <ProjectReference Include="..\JobHunter.Infrastructure.Cache.InMemory\JobHunter.Infrastructure.Cache.InMemory.csproj" />
       <ProjectReference Include="..\JobHunter.Infrastructure.Persistent.Postgres\JobHunter.Infrastructure.Persistent.Postgres.csproj" />
       <ProjectReference Include="..\JobHunter.Application\JobHunter.Application.csproj" />
       <ProjectReference Include="..\JobHunter.Domain\JobHunter.Domain.csproj" />

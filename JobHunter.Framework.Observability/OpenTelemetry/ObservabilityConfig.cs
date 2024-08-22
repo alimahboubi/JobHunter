@@ -44,6 +44,7 @@ public class OpenTelemetryTracingConfig
 
     public bool IsElasticSearchClientTraceEnabled { get; set; }
     public bool IsQuartzTraceEnabled { get; set; }
+    public bool IsEntityFrameWorkTraceEnabled { get; set; }
 
     /// <summary>
     /// The SqlClientInstrumentationOptions class exposes two properties that can be used to configure how the db.
