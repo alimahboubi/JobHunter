@@ -1,4 +1,5 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -10,7 +11,10 @@ COPY ["JobHunter.Worker/JobHunter.Worker.csproj", "JobHunter.Worker/"]
 COPY ["JobHunter.Infrastructure.Persistent.Postgres/JobHunter.Infrastructure.Persistent.Postgres.csproj", "JobHunter.Infrastructure.Persistent.Postgres/"]
 COPY ["JobHunter.Domain/JobHunter.Domain.csproj", "JobHunter.Domain/"]
 COPY ["JobHunter.Infrastructure.Linkedin/JobHunter.Infrastructure.Linkedin.csproj", "JobHunter.Infrastructure.Linkedin/"]
+COPY ["JobHunter.Framework.Observability/JobHunter.Framework.Observability.csproj", "JobHunter.Framework.Observability/"]
+COPY ["JobHunter.Application.Abstraction/JobHunter.Application.Abstraction.csproj", "JobHunter.Application.Abstraction/"]
 COPY ["JobHunter.Application/JobHunter.Application.csproj", "JobHunter.Application/"]
+COPY ["JobHunter.Infrastructure.Cache.InMemory/JobHunter.Infrastructure.Cache.InMemory.csproj", "JobHunter.Infrastructure.Cache.InMemory/"]
 RUN dotnet restore "JobHunter.Worker/JobHunter.Worker.csproj"
 COPY . .
 WORKDIR "/src/JobHunter.Worker"
