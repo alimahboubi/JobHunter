@@ -51,7 +51,7 @@ public class JobCrawlerService(
             if (!jobs.Any())
                 return jobResults;
 
-            foreach (var jobCardDto in jobs.Take(2))
+            foreach (var jobCardDto in jobs)
             {
                 try
                 {
@@ -64,7 +64,7 @@ public class JobCrawlerService(
 
                     var jobDescription =
                         await jobDescriptionCrawler.FetchDescriptionAsync(page, jobCardDto.Url, jobCategory);
-                    if (!criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
+                    if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
                         continue;
                     }
