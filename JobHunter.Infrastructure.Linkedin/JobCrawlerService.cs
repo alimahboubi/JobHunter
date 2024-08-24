@@ -121,6 +121,10 @@ public class JobCrawlerService(
         await page.ClickAsync("button[type='submit']");
 
         // Wait for the navigation to complete
+        await page.ScreenshotAsync(new()
+        {
+            Path = "login.jpg"
+        });
         await page.WaitForNavigationAsync();
     }
 
