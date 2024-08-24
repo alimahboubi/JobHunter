@@ -69,7 +69,7 @@ public class BackgroundJobService(
                 EmploymentType = job.EmploymentType,
                 LocationType = job.LocationType,
                 NumberOfEmployees = job.NumberOfEmployees,
-                JobDescription = job.NumberOfEmployees,
+                JobDescription = job.JobDescription,
                 Keywords = keywords
             };
             await jobRepository.AddAsync(jobEntity, ct);
