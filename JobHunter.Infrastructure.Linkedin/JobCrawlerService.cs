@@ -111,6 +111,10 @@ public class JobCrawlerService(
     private async Task LoginAsync(IPage page, string username, string password)
     {
         await page.GotoAsync("https://www.linkedin.com/login");
+        await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+        if (page.Url == "https://www.linkedin.com/feed")
+            return;
+
         await page.WaitForSelectorAsync(".login__form");
 
         // Fill out the login form
