@@ -129,7 +129,7 @@ public class JobCrawlerService(
         {
             Path = "login.jpg"
         });
-        await page.WaitForNavigationAsync();
+        await page.WaitForURLAsync("https://www.linkedin.com/feed");
     }
 
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)
