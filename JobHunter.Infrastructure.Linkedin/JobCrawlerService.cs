@@ -20,16 +20,18 @@ public class JobCrawlerService(
     PlaywrightConfigurations playwrightConfigurations,
     ICacheService cacheService) : IJobCrawlerService
 {
+    private IPage? _page;
+
     public async Task<List<JobResultDto>> GetJobPositions(TargetPositionDto targetPositionDto,
         CancellationToken ct = default)
     {
-        var page = await InitializePlaywright();
-        await LoginAsync(page, targetPositionDto.Username, targetPositionDto.Password);
+        await InitializePlaywright();
+        await LoginAsync(targetPositionDto.Username, targetPositionDto.Password);
 
         var results = new List<JobResultDto>();
         foreach (var location in targetPositionDto.TargetLocations)
         {
-            var fetchedJob = await GetJobsForLocationAsync(page, location, targetPositionDto.JobTitle,
+            var fetchedJob = await GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
                 targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.JobCategory,
                 ct);
             results.AddRange(fetchedJob);
@@ -38,7 +40,7 @@ public class JobCrawlerService(
         return results;
     }
 
-    private async Task<List<JobResultDto>> GetJobsForLocationAsync(IPage page, string location, string positionName,
+    private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
         List<string> keywords, List<string> criticalKeywords, JobCategory jobCategory, CancellationToken ct)
     {
         using var jobLocationSpan = tracer.StartActiveSpan("GetJobsForLocationAsync");
@@ -51,7 +53,7 @@ public class JobCrawlerService(
             if (!jobs.Any())
                 return jobResults;
 
-            foreach (var jobCardDto in jobs)
+            foreach (var jobCardDto in jobs.Take(1))
             {
                 try
                 {
@@ -63,7 +65,7 @@ public class JobCrawlerService(
                     cacheService.Set(jobCardDto.Id, jobCardDto, new TimeSpan(1, 0, 0, 0));
 
                     var jobDescription =
-                        await jobDescriptionCrawler.FetchDescriptionAsync(page, jobCardDto.Url, jobCategory);
+                        await jobDescriptionCrawler.FetchDescriptionAsync(_page, jobCardDto.Url, jobCategory);
                     if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
                         continue;
@@ -93,8 +95,10 @@ public class JobCrawlerService(
         return jobResults;
     }
 
-    private async Task<IPage> InitializePlaywright()
+    private async Task InitializePlaywright()
     {
+        if (_page is not null)
+            return;
         var playwright = await Playwright.CreateAsync();
         var browser = await playwright.Chromium.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
         var iphone13 = playwright.Devices["iPhone 13"];
@@ -104,32 +108,31 @@ public class JobCrawlerService(
             throw new Exception("Failed to Connect browser");
         }
 
-        var page = await context.NewPageAsync();
-        return page;
+        _page = await context.NewPageAsync();
     }
 
-    private async Task LoginAsync(IPage page, string username, string password)
+    private async Task LoginAsync(string username, string password)
     {
-        var responsePage=await page.GotoAsync("https://www.linkedin.com/login");
-        await page.WaitForLoadStateAsync(LoadState.Load);
+        var responsePage = await _page.GotoAsync("https://www.linkedin.com/login");
+        await _page.WaitForLoadStateAsync(LoadState.Load);
         if (responsePage.Url == "https://www.linkedin.com/feed/")
             return;
 
-        await page.WaitForSelectorAsync(".login__form");
+        await _page.WaitForSelectorAsync(".login__form");
 
         // Fill out the login form
-        await page.FillAsync("input#username", username);
-        await page.FillAsync("input#password", password);
+        await _page.FillAsync("input#username", username);
+        await _page.FillAsync("input#password", password);
 
         // Click the login button
-        await page.ClickAsync("button[type='submit']");
+        await _page.ClickAsync("button[type='submit']");
 
         // Wait for the navigation to complete
-        await page.ScreenshotAsync(new()
+        await _page.ScreenshotAsync(new()
         {
             Path = "login.jpg"
         });
-        await page.WaitForURLAsync("https://www.linkedin.com/feed/");
+        await _page.WaitForURLAsync("https://www.linkedin.com/feed/");
     }
 
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)

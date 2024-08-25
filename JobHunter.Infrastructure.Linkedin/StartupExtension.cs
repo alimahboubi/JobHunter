@@ -8,9 +8,9 @@ public static class StartupExtension
 {
     public static IServiceCollection AddCrawlerService(this IServiceCollection services)
     {
-        services.AddScoped<JobSearchCrawler>();
-        services.AddScoped<JobDescriptionCrawler>();
-        services.AddScoped<IJobCrawlerService, JobCrawlerService>();
+        services.AddSingleton<JobSearchCrawler>();
+        services.AddSingleton<JobDescriptionCrawler>();
+        services.AddSingleton<IJobCrawlerService, JobCrawlerService>();
         return services;
     }
 
