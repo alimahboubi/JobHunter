@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using JobHunter.Application.Abstraction.Cache;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
@@ -52,13 +51,14 @@ public class JobCrawlerService(
 
             if (!jobs.Any())
                 return jobResults;
-
-            foreach (var jobCardDto in jobs.Take(1))
+            jobLocationSpan.SetAttribute("total job", jobs.Count);
+            foreach (var jobCardDto in jobs)
             {
                 try
                 {
                     if (jobCardDto.Id is not null && cacheService.Get<JobCardDto>(jobCardDto.Id) is not null)
                     {
+                        logger.LogInformation("Job with id {@id} has been fetchd previosly", jobCardDto.Id);
                         continue;
                     }
 
@@ -68,6 +68,7 @@ public class JobCrawlerService(
                         await jobDescriptionCrawler.FetchDescriptionAsync(_page, jobCardDto.Url, jobCategory);
                     if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
                     {
+                        logger.LogInformation("Job with id {@id} doesn't match with any keywords", jobCardDto.Id);
                         continue;
                     }
 
@@ -113,10 +114,14 @@ public class JobCrawlerService(
 
     private async Task LoginAsync(string username, string password)
     {
+        logger.LogInformation("Start login");
         var responsePage = await _page.GotoAsync("https://www.linkedin.com/login");
         await _page.WaitForLoadStateAsync(LoadState.Load);
         if (responsePage.Url == "https://www.linkedin.com/feed/")
+        {
+            logger.LogInformation("Already logged in");
             return;
+        }
 
         await _page.WaitForSelectorAsync(".login__form");
 
@@ -133,6 +138,7 @@ public class JobCrawlerService(
             Path = "login.jpg"
         });
         await _page.WaitForURLAsync("https://www.linkedin.com/feed/");
+        logger.LogInformation("Successfully logged in");
     }
 
     private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)
