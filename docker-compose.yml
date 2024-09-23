@@ -41,3 +41,5 @@ networks:
   microservices_net:
     driver: bridge
     name: microservices_net
+volumes:
+  redis_data:
