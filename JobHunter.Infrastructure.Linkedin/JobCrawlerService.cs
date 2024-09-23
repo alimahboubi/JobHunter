@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using JobHunter.Application.Abstraction.Cache;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Enums;
@@ -160,6 +161,21 @@ public class JobCrawlerService(
 
     private static bool CheckJob(string jobDescription, List<string> criticalKeywords)
     {
-        return criticalKeywords.Any(keyword => jobDescription.Contains(keyword.ToLower()));
+        var domainRegex = new Regex(@"\b\w+\.net\b", RegexOptions.IgnoreCase);
+    
+        return criticalKeywords.Any(keyword =>
+        {
+            if (keyword.Equals(".net", StringComparison.OrdinalIgnoreCase))
+            {
+                // Check if ".net" is present but exclude if part of a domain
+                return jobDescription.Contains(".net", StringComparison.OrdinalIgnoreCase) &&
+                       !domainRegex.IsMatch(jobDescription);
+            }
+            else
+            {
+                // Standard contains check for other keywords
+                return jobDescription.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            }
+        });
     }
 }

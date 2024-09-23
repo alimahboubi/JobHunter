@@ -10,11 +10,30 @@
       - ASPNETCORE_ENVIRONMENT=Production
     networks:
       - microservices_net
+        
+  jobhunter.web-app:
+    image: jobhunter.web-app
+    build:
+      context: .
+      dockerfile: JobHunter.WebApp/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    networks:
+      - microservices_net
   
   playwright:
     image: jacoblincool/playwright:chromium-server-1.46.0
     ports:
       - 53333:53333
+    networks:
+      - microservices_net
+      
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379" # Redis default port
+    volumes:
+      - redis_data:/data
     networks:
       - microservices_net
 

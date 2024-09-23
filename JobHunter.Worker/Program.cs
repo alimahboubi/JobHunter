@@ -4,6 +4,7 @@ using JobHunter.Domain.Job.Configurations;
 using JobHunter.Domain.Job.Services;
 using JobHunter.Framework.Observability.OpenTelemetry;
 using JobHunter.Infrastructure.Cache.InMemory;
+using JobHunter.Infrastructure.Cache.Redis;
 using JobHunter.Infrastructure.Linkedin;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Worker;
@@ -37,7 +38,8 @@ builder.Services.AddSingleton(playwrightConfigurations);
 builder.Services.AddCrawlerService()
     .AddLinkedinHttpClient(linkedinConfiguration);
 
-builder.Services.AddInMemoryCache();
+var redisConnectionString = builder.Configuration.GetConnectionString("redis");
+builder.Services.AddRedisCache(redisConnectionString);
 
 var connectionString = builder.Configuration.GetConnectionString("JobHunter");
 builder.Services.AddRepositories()

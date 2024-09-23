@@ -16,4 +16,5 @@ public class Job
     public string? NumberOfEmployees { get; set; }
     public string? JobDescription { get; set; }
     public string Keywords { get; set; }
+    public bool IsApplied { get; set; }
 }
