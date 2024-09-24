@@ -8,6 +8,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["JobHunter.WebApp/JobHunter.WebApp.csproj", "JobHunter.WebApp/"]
+COPY ["JobHunter.Domain/JobHunter.Domain.csproj", "JobHunter.Domain/"]
+COPY ["JobHunter.Infrastructure.Persistent.Postgres/JobHunter.Infrastructure.Persistent.Postgres.csproj", "JobHunter.Infrastructure.Persistent.Postgres/"]
+COPY ["JobHunter.Application/JobHunter.Application.csproj", "JobHunter.Application/"]
 RUN dotnet restore "JobHunter.WebApp/JobHunter.WebApp.csproj"
 COPY . .
 WORKDIR "/src/JobHunter.WebApp"

@@ -8,12 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\JobHunter.Application\JobHunter.Application.csproj" />
       <ProjectReference Include="..\JobHunter.Domain\JobHunter.Domain.csproj" />
       <ProjectReference Include="..\JobHunter.Infrastructure.Persistent.Postgres\JobHunter.Infrastructure.Persistent.Postgres.csproj" />
@@ -26,6 +20,12 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Radzen.Blazor" Version="5.2.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>
