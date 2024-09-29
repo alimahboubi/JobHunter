@@ -13,7 +13,8 @@ public static class StartupExtension
         {
             Password = redisConfigurations.Password,
             AbortOnConnectFail = false,
-            ConnectTimeout = redisConfigurations.Timeout
+            ConnectTimeout = redisConfigurations.Timeout,
+            Ssl = false
         };
         configurationOptions.EndPoints.Add(redisConfigurations.Host, redisConfigurations.Port);
         services.AddSingleton<IConnectionMultiplexer>(x =>
