@@ -11,7 +11,6 @@ public static class StartupExtension
     {
         var configurationOptions = new ConfigurationOptions()
         {
-            Password = redisConfigurations.Password,
             AbortOnConnectFail = false,
             ConnectTimeout = redisConfigurations.Timeout,
             Ssl = false

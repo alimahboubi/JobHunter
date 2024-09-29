@@ -30,11 +30,6 @@
       
   redis:
     image: redis:latest
-    ports:
-      - "6379:6379" # Redis default port
-    environment:
-      - REDIS_PASSWORD=my_secure_password
-    command: [ "redis-server", "--requirepass", "my_secure_password" ]
     volumes:
       - redis_data:/data
     networks:
