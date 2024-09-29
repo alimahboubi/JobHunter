@@ -6,15 +6,20 @@ namespace JobHunter.Infrastructure.Cache.Redis;
 
 public static class StartupExtension
 {
-    public static IServiceCollection AddRedisCache(this IServiceCollection services, string connectionString)
+    public static IServiceCollection AddRedisCache(this IServiceCollection services,
+        RedisConfigurations redisConfigurations)
     {
-        services.AddSingleton<IConnectionMultiplexer>(x =>
-            ConnectionMultiplexer.Connect(connectionString));
-
-        services.AddStackExchangeRedisCache(options =>
+        var configurationOptions = new ConfigurationOptions()
         {
-            options.Configuration = connectionString;
-        });
+            Password = redisConfigurations.Password,
+            AbortOnConnectFail = false,
+            ConnectTimeout = redisConfigurations.Timeout
+        };
+        configurationOptions.EndPoints.Add(redisConfigurations.Host, redisConfigurations.Port);
+        services.AddSingleton<IConnectionMultiplexer>(x =>
+            ConnectionMultiplexer.Connect(configurationOptions));
+
+        services.AddStackExchangeRedisCache(options => { options.ConfigurationOptions = configurationOptions; });
         services.AddSingleton<ICacheService, RedisCacheService>();
         return services;
     }

@@ -38,8 +38,9 @@ builder.Services.AddSingleton(playwrightConfigurations);
 builder.Services.AddCrawlerService()
     .AddLinkedinHttpClient(linkedinConfiguration);
 
-var redisConnectionString = builder.Configuration.GetConnectionString("redis");
-builder.Services.AddRedisCache(redisConnectionString);
+var redisConfiguration = new RedisConfigurations();
+builder.Configuration.GetSection(nameof(RedisConfigurations)).Bind(redisConfiguration);
+builder.Services.AddRedisCache(redisConfiguration);
 
 var connectionString = builder.Configuration.GetConnectionString("JobHunter");
 builder.Services.AddRepositories()
