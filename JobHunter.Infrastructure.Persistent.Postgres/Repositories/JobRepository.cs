@@ -1,11 +1,10 @@
-using System.ComponentModel;
 using JobHunter.Domain.Job.Dto;
 using JobHunter.Domain.Job.Entities;
 using JobHunter.Domain.Job.Repositories;
 using JobHunter.Infrastructure.Persistent.Postgres.Extensions;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobHunter.Infrastructure.Persistent.Postgres.Respositories;
+namespace JobHunter.Infrastructure.Persistent.Postgres.Repositories;
 
 public class JobRepository(JobHunterDbContext dbContext) : IJobRepository
 {

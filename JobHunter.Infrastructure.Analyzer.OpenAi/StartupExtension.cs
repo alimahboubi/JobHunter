@@ -1,7 +1,6 @@
 using JobHunter.Domain.Job.Repositories;
 using JobHunter.Domain.Job.Services;
 using JobHunter.Infrastructure.Analyzer.OpenAi.Configurations;
-using JobHunter.Infrastructure.Persistent.Postgres.Respositories;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
 

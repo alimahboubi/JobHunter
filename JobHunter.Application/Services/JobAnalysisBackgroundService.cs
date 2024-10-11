@@ -9,7 +9,7 @@ namespace JobHunter.Application.Services;
 
 public class JobAnalysisBackgroundService(
     IJobRepository jobRepository,
-    IProceedJobCheckpointRepositories proceedJobCheckpointRepository,
+    IProceedJobCheckpointRepository proceedJobCheckpointRepository,
     ILogger<JobAnalysisBackgroundService> logger,
     IJobAnalyzerService jobAnalyzerService,
     UsersConfigurations userConfigurations)

@@ -2,9 +2,9 @@ using JobHunter.Domain.Job.Entities;
 using JobHunter.Domain.Job.Repositories;
 using Microsoft.EntityFrameworkCore;
 
-namespace JobHunter.Infrastructure.Persistent.Postgres.Respositories;
+namespace JobHunter.Infrastructure.Persistent.Postgres.Repositories;
 
-public class ProceedJobCheckpointRepositories(JobHunterDbContext dbContext) : IProceedJobCheckpointRepositories
+public class ProceedJobCheckpointRepository(JobHunterDbContext dbContext) : IProceedJobCheckpointRepository
 {
     public async Task<ProceedJobCheckpoint?> GetAsync(string serviceName, CancellationToken ct = default)
     {

@@ -1,5 +1,5 @@
 ﻿using JobHunter.Domain.Job.Repositories;
-using JobHunter.Infrastructure.Persistent.Postgres.Respositories;
+using JobHunter.Infrastructure.Persistent.Postgres.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,6 +16,7 @@ public static class StartupExtension
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IJobRepository, JobRepository>();
+        services.AddScoped<IProceedJobCheckpointRepository, ProceedJobCheckpointRepository>();
         return services;
     }
 }
