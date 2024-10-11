@@ -49,7 +49,7 @@
       POSTGRES_USER: "${DB_USERNAME:-jobhunter}"
       POSTGRES_PASSWORD: "${DB_PASSWORD:-NlLYoS6i8120}"
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - db_data
     restart: unless-stopped
     networks:
       microservices_net:
@@ -62,4 +62,4 @@ networks:
     name: microservices_net
 volumes:
   redis_data:
-  postgresql_data:
+  db_data:
