@@ -29,7 +29,10 @@ namespace JobHunter.Infrastructure.Persistent.Postgres.Migrations
                     EmploymentType = table.Column<string>(type: "text", nullable: true),
                     LocationType = table.Column<string>(type: "text", nullable: true),
                     NumberOfEmployees = table.Column<string>(type: "text", nullable: true),
-                    JobDescription = table.Column<string>(type: "text", nullable: true)
+                    JobDescription = table.Column<string>(type: "text", nullable: true),
+                    Keywords = table.Column<string>(type: "jsonb", nullable: false),
+                    IsApplied = table.Column<bool>(type: "boolean", nullable: false),
+                    MatchAccuracy = table.Column<float>(type: "real", nullable: true)
                 },
                 constraints: table =>
                 {

@@ -54,6 +54,9 @@ namespace JobHunter.Infrastructure.Persistent.Postgres.Migrations
                     b.Property<string>("LocationType")
                         .HasColumnType("text");
 
+                    b.Property<float?>("MatchAccuracy")
+                        .HasColumnType("real");
+
                     b.Property<string>("NumberOfEmployees")
                         .HasColumnType("text");
 

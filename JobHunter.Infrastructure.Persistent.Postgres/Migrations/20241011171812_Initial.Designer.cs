@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace JobHunter.Infrastructure.Persistent.Postgres.Migrations
 {
     [DbContext(typeof(JobHunterDbContext))]
-    [Migration("20240815190537_Initial")]
+    [Migration("20241011171812_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -40,8 +40,15 @@ namespace JobHunter.Infrastructure.Persistent.Postgres.Migrations
                     b.Property<string>("EmploymentType")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsApplied")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("JobDescription")
                         .HasColumnType("text");
+
+                    b.Property<string>("Keywords")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -49,6 +56,9 @@ namespace JobHunter.Infrastructure.Persistent.Postgres.Migrations
 
                     b.Property<string>("LocationType")
                         .HasColumnType("text");
+
+                    b.Property<float?>("MatchAccuracy")
+                        .HasColumnType("real");
 
                     b.Property<string>("NumberOfEmployees")
                         .HasColumnType("text");
