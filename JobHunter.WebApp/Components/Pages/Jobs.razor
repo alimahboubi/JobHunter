@@ -1,0 +1,37 @@
+@page "/"
+@using JobHunter.Domain.Job.Dto
+
+<AntDesign.Table @bind-PageIndex="@_pageIndex"
+                 @bind-PageSize="@_pageSize"
+                 @bind-Total="ResponseDto.TotalItems"
+                 DataSource="@ResponseDto.Data"
+                 RemoteDataSource
+                 TItem="GetPaginatedJobResponseDto"
+                 OnChange=@OnChange
+                 @ref="_table">
+    <PropertyColumn Property="c => c.Id" Sortable/>
+    <PropertyColumn Property="c => c.Title"/>
+    <PropertyColumn Property="c => c.Company"/>
+    <PropertyColumn Property="c => c.Location"/>
+    <Column Title="Url" @bind-Field="@context.Url">
+        <a href="@context.Url" target="_blank">link</a>
+    </Column>
+    <PropertyColumn Property="c => c.PostedDate"/>
+    <Column Title="IsApplied" @bind-Field="@context.IsApplied" Sortable Filterable>
+        <Switch Checked="@context.IsApplied" OnChange="async (b) => { await CheckedChanged(context.Id, b); }"></Switch>
+    </Column>
+    <ActionColumn Title="Action">
+        <Popconfirm Title="Sure to delete?"
+                    OnConfirm="() => Delete(context)"
+                    OkText="Yes"
+                    CancelText="No">
+            <a style="color: red">Delete</a>
+        </Popconfirm>
+    </ActionColumn>
+    <Column Title="Match Accuracy" @bind-Field="@context.MatchAccuracy" Sortable>
+        @{
+            var acc = context.MatchAccuracy is null ? "N/A" : $"{context.MatchAccuracy}%";
+            <p>@acc</p>
+        }
+    </Column>
+</AntDesign.Table>

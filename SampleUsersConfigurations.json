@@ -1,0 +1,40 @@
+{
+  "Profiles": [
+    {
+      "IsEnabled": false,
+      "Name": "Ali",
+      "Username": "",
+      "Password": "",
+      "Id": "55adc707-cfc6-41ae-ac9e-c4b1c6ce1e61",
+      "TextResumePath": "/app/UserConfigurations/resume.txt",
+      "JobTargetSettings": {
+        "JobTitle": "Backend developer",
+        "JobCategory": "Software",
+        "TargetLocations": [
+          "Germany"
+        ],
+        "TargetKeywords": [
+          "Software engineer",
+          "Software developer",
+          "Backend engineer",
+          "C#",
+          ".NET",
+          "ASP.NET",
+          "TDD",
+          "BDD",
+          "Event sourcing",
+          "Azure",
+          "AWS",
+          "Docker",
+          "SQL",
+          "Kafka"
+        ],
+        "MustHaveKeywords": [
+          "C#",
+          ".NET",
+          "ASP.NET"
+        ]
+      }
+    }
+  ]
+}

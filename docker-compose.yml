@@ -1,0 +1,65 @@
+﻿services:
+  jobhunter.worker:
+    image: jobhunter.worker
+    build:
+      context: .
+      dockerfile: JobHunter.Worker/Dockerfile
+    depends_on:
+      - playwright
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__JobHunter=${DB_CONNECTION_STRING}
+      - OpenAiConfigurations__APIKey=${OPENAI_CONFIGURATION_API_KEY}
+      - UsersConfigurationsPath=${USERS_CONFIGURATION_PATH}
+    volumes:
+      - /sample/path/UserConfigurations.json:/app/UserConfigurations/UsersConfigurations.json
+      - /sample/path/resume.txt:/app/UserConfigurations/resume.txt
+    networks:
+      - microservices_net
+        
+  jobhunter.web-app:
+    image: jobhunter.web-app
+    build:
+      context: .
+      dockerfile: JobHunter.WebApp/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__JobHunter=${DB_CONNECTION_STRING}
+    networks:
+      - microservices_net
+  
+  playwright:
+    image: jacoblincool/playwright:chromium-server-1.46.0
+    ports:
+      - 53333:53333
+    networks:
+      - microservices_net
+      
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+    networks:
+      - microservices_net
+        
+  postgresql:
+    container_name: postgresql
+    image: 'postgres:13.4'
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-jobhunter}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-NlLYoS6i8120}"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      microservices_net:
+        aliases:
+          - postgresql
+
+networks:
+  microservices_net:
+    driver: bridge
+    name: microservices_net
+volumes:
+  redis_data:
+  postgresql_data:
