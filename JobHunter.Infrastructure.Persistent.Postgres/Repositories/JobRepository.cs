@@ -47,8 +47,9 @@ public class JobRepository(JobHunterDbContext dbContext) : IJobRepository
     public async Task<List<Job>> GetUnprocessedJobsAfterCheckpoint(int limit, int checkPoint, CancellationToken ct)
     {
         return await dbContext.Jobs
-            .Where(e => e.Id > checkPoint && e.MatchAccuracy != null)
+            .Where(e => e.Id > checkPoint && e.MatchAccuracy == null)
             .Take(limit)
+            .OrderBy(e=>e.Id)
             .ToListAsync(ct);
     }
 
