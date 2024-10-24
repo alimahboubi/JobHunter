@@ -1,173 +1,260 @@
-using HtmlAgilityPack;
 using JobHunter.Infrastructure.Linkedin.Configurations;
-using JobHunter.Infrastructure.Linkedin.Models;
-using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
+using JobHunter.Infrastructure.Linkedin.Models;
+using JobHunter.Application.Abstraction.Cache;
+using Microsoft.Extensions.Logging;
+using Microsoft.Playwright;
 using OpenTelemetry.Trace;
+using System.Text.RegularExpressions;
 
-namespace JobHunter.Infrastructure.Linkedin
+namespace JobHunter.Infrastructure.Linkedin;
+
+public class JobSearchCrawler(
+    LinkedinConfiguration linkedinConfiguration,
+    ILogger<JobSearchCrawler> logger,
+    ICacheService cacheService,
+    Tracer tracer)
 {
-    public class JobSearchCrawler(
-        LinkedinConfiguration linkedinConfiguration,
-        ILogger<JobSearchCrawler> logger,
-        IHttpClientFactory httpClientFactory,
-        Tracer tracer)
-    {
-        private readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(LinkedinConfiguration));
+    private const int MaxRetries = 3;
+    private const int DelayMilliseconds = 1000;
 
-        public async Task<List<JobCardDto>> SearchJobResultsAsync(string location, string positionName,
-            List<string> searchKeywords, CancellationToken ct = default)
+    public async Task<List<JobCardDto>> SearchJobResultsAsync(
+        IPage page,
+        string location,
+        string positionName,
+        List<string> searchKeywords,
+        CancellationToken ct = default)
+    {
+        if (page == null) throw new ArgumentNullException(nameof(page));
+        if (string.IsNullOrWhiteSpace(location))
+            throw new ArgumentException("Location cannot be null or empty.", nameof(location));
+        if (string.IsNullOrWhiteSpace(positionName))
+            throw new ArgumentException("Position name cannot be null or empty.", nameof(positionName));
+        if (searchKeywords == null) throw new ArgumentNullException(nameof(searchKeywords));
+
+        try
+        {
+            await FetchJobSearchPageContentAsync(page, location, positionName, searchKeywords, ct);
+            return await ExtractSearchResultsAsync(page);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while searching for job results.");
+            throw;
+        }
+    }
+
+    private async Task FetchJobSearchPageContentAsync(
+        IPage page,
+        string location,
+        string positionName,
+        List<string> searchKeywords,
+        CancellationToken ct)
+    {
+        using var span = tracer.StartActiveSpan(nameof(FetchJobSearchPageContentAsync));
+        var searchQuery = CreateSearchQuery(location, positionName, searchKeywords);
+        var url = $"{linkedinConfiguration.JobSearchBaseUrl}?{searchQuery}";
+
+        int retries = 0;
+        while (retries < MaxRetries)
         {
             try
             {
-                var jobPage = await FetchJobSearchPageContentAsync(location, positionName, searchKeywords, ct);
-                if (string.IsNullOrEmpty(jobPage))
-                    throw new Exception("Failed to fetch job page content.");
-
-                var jobCards = ParseJobCards(jobPage, location);
-                return jobCards.Select(CreateJobCardDto).ToList();
+                await NavigateToPageAsync(page, url, ct);
+                span.SetStatus(Status.Ok);
+                return;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occurred while searching for job results.");
-                throw;
-            }
-        }
+                retries++;
+                logger.LogWarning(ex, "Retry {RetryCount}/{MaxRetries} for fetching job search page content.",
+                    retries, MaxRetries);
+                span.SetAttribute("retries", retries);
+                span.SetStatus(Status.Error);
 
-        private async Task<string> FetchJobSearchPageContentAsync(string location, string positionName,
-            List<string> searchKeywords, CancellationToken ct = default)
-        {
-            const int maxRetries = 3;
-            int retries = 0;
-            var searchQuery = "?" + CreateSearchQuery(location, positionName, searchKeywords);
-
-            while (retries < maxRetries)
-            {
-                try
+                if (retries >= MaxRetries)
                 {
-                    var response = await _httpClient.GetAsync(searchQuery, ct);
-
-                    response.EnsureSuccessStatusCode(); // Throws if not 2xx
-
-                    return await response.Content.ReadAsStringAsync(ct);
+                    throw new JobSearchCrawlerException(location);
                 }
-                catch (HttpRequestException ex) when (retries < maxRetries)
-                {
-                    logger.LogWarning(ex, "Retry {RetryCount}/{MaxRetries} for fetching job search page content",
-                        retries + 1, maxRetries);
-                    retries++;
-                    await Task.Delay(3000, ct);
-                }
+
+                await Task.Delay(DelayMilliseconds, ct);
+            }
+        }
+    }
+
+    private async Task NavigateToPageAsync(IPage page, string url, CancellationToken ct)
+    {
+        await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.Load });
+        await page.WaitForSelectorAsync(PageNodes.JobListNode,
+            new PageWaitForSelectorOptions { Timeout = DelayMilliseconds });
+    }
+
+    private async Task<List<JobCardDto>> ExtractSearchResultsAsync(IPage page)
+    {
+        using var span = tracer.StartActiveSpan(nameof(ExtractSearchResultsAsync));
+        var jobElements = await page.QuerySelectorAllAsync(PageNodes.JobListItems);
+        var searchResults = new List<JobCardDto>();
+
+        foreach (var element in jobElements)
+        {
+            var url = await FindCardUrlAsync(element);
+            var id = ExtractJobIdFromUrl(url);
+
+            if (IsJobAlreadyCached(id))
+            {
+                logger.LogInformation("Job with ID {Id} is already cached.", id);
+                continue;
             }
 
-            throw new JobSearchCrawlerException(location);
-        }
-
-        private HtmlNodeCollection ParseJobCards(string pageContents, string location)
-        {
-            using var parsJobSpan = tracer.StartActiveSpan("parsJobSpan");
-            var htmlDocument = new HtmlDocument();
-            htmlDocument.LoadHtml(pageContents);
-
-            var jobCards = htmlDocument.DocumentNode.SelectNodes(PageNodes.JobCards);
-            if (jobCards == null)
-                throw new JobSearchCrawlerException(location);
-
-            return jobCards;
-        }
-
-        private JobCardDto CreateJobCardDto(HtmlNode htmlContent)
-        {
-            var url = FindCardUrl(htmlContent);
-            return new JobCardDto
+            try
             {
-                Id = FindJobIdFromUrl(url),
-                Title = FindCardItem(htmlContent, PageNodes.JobTitleNode),
-                Company = FindCardItem(htmlContent, PageNodes.CompanyNode),
-                Location = FindCardItem(htmlContent, PageNodes.LocationNode),
-                Url = url,
-                PostedDate = FindCardDateTime(htmlContent),
-            };
-        }
-
-        private string FindCardItem(HtmlNode node, string xpath)
-        {
-            var selectedNode = node.SelectSingleNode(xpath);
-            return selectedNode?.InnerText.Trim() ?? "N/A";
-        }
-
-        private string FindCardUrl(HtmlNode htmlContent)
-        {
-            var node = htmlContent.SelectSingleNode(PageNodes.JobUrlNode);
-            var url = node?.Attributes["href"]?.Value;
-            int questionMarkIndex = url.IndexOf('?');
-
-            if (questionMarkIndex >= 0)
+                var job = await ParseJobDetailAsync(page, element, id, url);
+                searchResults.Add(job);
+                cacheService.Set(id, job, TimeSpan.FromDays(1));
+            }
+            catch (Exception ex)
             {
-                url = url.Substring(0, questionMarkIndex);
+                logger.LogError(ex, "Failed to parse job detail for ID {Id}.", id);
+            }
+        }
+
+        return searchResults;
+    }
+
+    private async Task<JobCardDto> ParseJobDetailAsync(IPage page, IElementHandle element, string id, string url)
+    {
+        var description = await GetJobDescriptionAsync(element, page, id);
+
+        var jobCardDto = new JobCardDto
+        {
+            Id = id,
+            Title = await ParseCardItemAsync(element, PageNodes.JobTitleNode),
+            Company = await ParseCardItemAsync(element, PageNodes.CompanyNode),
+            Location = await ParseCardItemAsync(element, PageNodes.LocationNode),
+            Url = url,
+            PostedDate = await ParsePostedDateAsync(element),
+            Description = await ExtractJobDescriptionAsync(page)
+        };
+
+        return jobCardDto;
+    }
+
+
+    private bool IsJobAlreadyCached(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return false;
+        return cacheService.Get<JobCardDto>(id) != null;
+    }
+
+    private async Task<String> GetJobDescriptionAsync(IElementHandle element, IPage page, string id)
+    {
+        try
+        {
+            var clickableDescription = await element.QuerySelectorAsync(PageNodes.ClickableDescription);
+            if (clickableDescription != null)
+            {
+                var responseTask = page.WaitForResponseAsync(response =>
+                    Regex.IsMatch(response.Url, $".*{id}.*"));
+
+                await clickableDescription.ClickAsync();
+                await responseTask;
             }
 
-            return url;
+            return await ExtractJobDescriptionAsync(page);
         }
-
-        private DateTime FindCardDateTime(HtmlNode htmlContent)
+        catch (Exception e)
         {
-            var time = DateTime.UtcNow;
-            var selectedNode = htmlContent.SelectSingleNode(PageNodes.PostedDateNode);
-            var postedTime = selectedNode?.InnerText.Trim() ?? "N/A";
-            var numericString = Regex.Match(postedTime, @"\d+").Value;
-
-            if (string.IsNullOrEmpty(numericString))
-                return time;
-
-            var decrementValue = int.Parse(numericString);
-
-            if (postedTime.Contains("second"))
-                time = time.AddSeconds(-decrementValue);
-            else if (postedTime.Contains("minute"))
-                time = time.AddMinutes(-decrementValue);
-            else if (postedTime.Contains("hour"))
-                time = time.AddHours(-decrementValue);
-            else if (postedTime.Contains("day"))
-                time = time.AddDays(-decrementValue);
-            else if (postedTime.Contains("week"))
-                time = time.AddDays(-7 * decrementValue);
-            else if (postedTime.Contains("month"))
-                time = time.AddMonths(-decrementValue);
-            else if (postedTime.Contains("year"))
-                time = time.AddYears(-decrementValue);
-
-            return time;
+            logger.LogError(e, "Failed to load description");
+            return "N/A";
         }
+    }
 
-        private string FindJobIdFromUrl(string url)
+    private async Task<string> ExtractJobDescriptionAsync(IPage page)
+    {
+        var selectedNode = await page.QuerySelectorAsync(PageNodes.Description);
+        return selectedNode == null ? "N/A" : (await selectedNode.InnerTextAsync()).Trim();
+    }
+
+    private async Task<string> ParseCardItemAsync(IElementHandle node, string selector)
+    {
+        var selectedNode = await node.QuerySelectorAsync(selector);
+        return selectedNode == null ? "N/A" : (await selectedNode.InnerTextAsync()).Trim();
+    }
+
+
+    private async Task<string> FindCardUrlAsync(IElementHandle element)
+    {
+        var node = await element.QuerySelectorAsync(PageNodes.JobUrlNode);
+        if (node == null)
         {
-            var jobUri = new Uri(url);
-            var path = jobUri.LocalPath;
-            return path.Split("-").Last();
+            throw new Exception("Job URL node not found.");
         }
 
-        private string? CreateSearchQuery(string location, string positionName, List<string> searchKeywords)
+        var href = await node.GetAttributeAsync("href");
+        if (string.IsNullOrWhiteSpace(href))
         {
-            var queryString = System.Web.HttpUtility.ParseQueryString(string.Empty);
-            queryString.Add("f_TPR", $"r{linkedinConfiguration.TimeIntervalSeconds}");
-            queryString.Add("location", location);
-
-            var keywordsString = $"&keywords={CreateKeywordQuery(positionName, searchKeywords)}";
-            return queryString + keywordsString;
+            throw new Exception("Job URL not found.");
         }
 
-        private string CreateKeywordQuery(string positionName, List<string> searchKeywords)
+        var url = href.Split('?')[0];
+        return new Uri(new Uri("https://linkedin.com"), url).ToString();
+    }
+
+    private async Task<DateTime> ParsePostedDateAsync(IElementHandle element)
+    {
+        var selectedNode = await element.QuerySelectorAsync(PageNodes.PostedDateNode);
+        if (selectedNode == null)
         {
-            var quaryableKeywords = new List<string>();
-            quaryableKeywords.Add(positionName);
-            foreach (var keyword in searchKeywords)
-            {
-                quaryableKeywords.Add(keyword.Replace("#", "%23"));
-            }
-
-            return string.Join(" OR ", quaryableKeywords);
+            return DateTime.UtcNow;
         }
+
+        var postedTimeText = (await selectedNode.InnerTextAsync()).Trim();
+        var match = Regex.Match(postedTimeText, @"(\d+)\s+(second|minute|hour|day|week|month|year)s?",
+            RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+        {
+            return DateTime.UtcNow;
+        }
+
+        int value = int.Parse(match.Groups[1].Value);
+        string unit = match.Groups[2].Value.ToLowerInvariant();
+
+        return unit switch
+        {
+            "second" => DateTime.UtcNow.AddSeconds(-value),
+            "minute" => DateTime.UtcNow.AddMinutes(-value),
+            "hour" => DateTime.UtcNow.AddHours(-value),
+            "day" => DateTime.UtcNow.AddDays(-value),
+            "week" => DateTime.UtcNow.AddDays(-7 * value),
+            "month" => DateTime.UtcNow.AddMonths(-value),
+            "year" => DateTime.UtcNow.AddYears(-value),
+            _ => DateTime.UtcNow
+        };
+    }
+
+    private string ExtractJobIdFromUrl(string url)
+    {
+        var jobUri = new Uri(url);
+        var segments = jobUri.AbsolutePath.Trim('/').Split('/');
+        return segments.LastOrDefault() ?? string.Empty;
+    }
+
+    private string CreateSearchQuery(string location, string positionName, List<string> searchKeywords)
+    {
+        var queryString = System.Web.HttpUtility.ParseQueryString(string.Empty);
+        queryString["f_TPR"] = $"r{linkedinConfiguration.TimeIntervalSeconds}";
+        queryString["location"] = location;
+        var keywordsString = $"&keywords={CreateKeywordQuery(positionName, searchKeywords)}";
+        return queryString + keywordsString;
+    }
+
+    private string CreateKeywordQuery(string positionName, List<string> searchKeywords)
+    {
+        var keywords = new List<string> { positionName };
+        keywords.AddRange(searchKeywords);
+
+        var encodedKeywords = keywords.Select(k => System.Web.HttpUtility.UrlEncode(k));
+        return string.Join(" OR ", encodedKeywords);
     }
 }

@@ -1,7 +1,5 @@
 using System.Text.RegularExpressions;
-using JobHunter.Application.Abstraction.Cache;
 using JobHunter.Domain.Job.Dto;
-using JobHunter.Domain.Job.Enums;
 using JobHunter.Domain.Job.Services;
 using JobHunter.Infrastructure.Linkedin.Configurations;
 using JobHunter.Infrastructure.Linkedin.Exceptions;
@@ -13,12 +11,10 @@ using OpenTelemetry.Trace;
 namespace JobHunter.Infrastructure.Linkedin;
 
 public class JobCrawlerService(
-    JobDescriptionCrawler jobDescriptionCrawler,
     JobSearchCrawler jobSearchCrawler,
     ILogger<JobCrawlerService> logger,
     Tracer tracer,
-    PlaywrightConfigurations playwrightConfigurations,
-    ICacheService cacheService) : IJobCrawlerService
+    PlaywrightConfigurations playwrightConfigurations) : IJobCrawlerService
 {
     private IPage? _page;
 
@@ -32,8 +28,7 @@ public class JobCrawlerService(
         foreach (var location in targetPositionDto.TargetLocations)
         {
             var fetchedJob = await GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
-                targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.JobCategory,
-                ct);
+                targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, ct);
             results.AddRange(fetchedJob);
         }
 
@@ -41,46 +36,27 @@ public class JobCrawlerService(
     }
 
     private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
-        List<string> keywords, List<string> criticalKeywords, JobCategory jobCategory, CancellationToken ct)
+        List<string> keywords, List<string> criticalKeywords, CancellationToken ct)
     {
         using var jobLocationSpan = tracer.StartActiveSpan("GetJobsForLocationAsync");
         jobLocationSpan.SetAttribute("Location", location);
         var jobResults = new List<JobResultDto>();
         try
         {
-            var jobs = await jobSearchCrawler.SearchJobResultsAsync(location, positionName, keywords, ct);
+            var jobs = await jobSearchCrawler.SearchJobResultsAsync(_page, location, positionName, keywords, ct);
 
             if (!jobs.Any())
                 return jobResults;
             jobLocationSpan.SetAttribute("total job", jobs.Count);
             foreach (var jobCardDto in jobs)
             {
-                try
+                if (criticalKeywords.Any() && !CheckJob(jobCardDto.Description, criticalKeywords))
                 {
-                    if (jobCardDto.Id is not null && cacheService.Get<JobCardDto>(jobCardDto.Id) is not null)
-                    {
-                        logger.LogInformation("Job with id {@id} has been fetchd previosly", jobCardDto.Id);
-                        continue;
-                    }
-
-                    cacheService.Set(jobCardDto.Id, jobCardDto, new TimeSpan(1, 0, 0, 0));
-
-                    var jobDescription =
-                        await jobDescriptionCrawler.FetchDescriptionAsync(_page, jobCardDto.Url, jobCategory);
-                    if (criticalKeywords.Any() && !CheckJob(jobDescription.Description, criticalKeywords))
-                    {
-                        logger.LogInformation("Job with id {@id} doesn't match with any keywords", jobCardDto.Id);
-                        continue;
-                    }
-
-                    jobResults.Add(CreateJobResultDto(jobCardDto, jobDescription));
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Job Description failed to handle");
+                    logger.LogInformation("Job with id {@id} doesn't match with any keywords", jobCardDto.Id);
+                    continue;
                 }
 
-                await Task.Delay(1000, ct);
+                jobResults.Add(CreateJobResultDto(jobCardDto));
             }
         }
         catch (JobSearchCrawlerException ex)
@@ -103,14 +79,13 @@ public class JobCrawlerService(
             return;
         var playwright = await Playwright.CreateAsync();
         var browser = await playwright.Chromium.ConnectAsync(playwrightConfigurations.PlaywrightUrl);
-        var iphone13 = playwright.Devices["iPhone 13"];
-        var context = await browser.NewContextAsync(iphone13);
+
         if (!browser.IsConnected)
         {
             throw new Exception("Failed to Connect browser");
         }
 
-        _page = await context.NewPageAsync();
+        _page = await browser.NewPageAsync();
     }
 
     private async Task LoginAsync(string username, string password)
@@ -122,6 +97,12 @@ public class JobCrawlerService(
         {
             logger.LogInformation("Already logged in");
             return;
+        }
+
+        var cookie = await _page.QuerySelectorAsync("artdeco-global-alert__body");
+        if (cookie is not null)
+        {
+            await _page.ClickAsync("button[action-type='ACCEPT']");
         }
 
         await _page.WaitForSelectorAsync(".login__form");
@@ -142,7 +123,7 @@ public class JobCrawlerService(
         logger.LogInformation("Successfully logged in");
     }
 
-    private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto, JobDescriptionResultDto jobDescription)
+    private static JobResultDto CreateJobResultDto(JobCardDto jobCardDto)
     {
         return new JobResultDto
         {
@@ -153,16 +134,14 @@ public class JobCrawlerService(
             Url = jobCardDto.Url,
             PostedDate = jobCardDto.PostedDate,
             EmploymentType = jobCardDto.EmploymentType,
-            LocationType = jobDescription.LocationType,
-            JobDescription = jobDescription.Description,
-            SeniorityLevel = jobDescription.SeniorityLevel
+            JobDescription = jobCardDto.Description,
         };
     }
 
     private static bool CheckJob(string jobDescription, List<string> criticalKeywords)
     {
         var domainRegex = new Regex(@"\b\w+\.net\b", RegexOptions.IgnoreCase);
-    
+
         return criticalKeywords.Any(keyword =>
         {
             if (keyword.Equals(".net", StringComparison.OrdinalIgnoreCase))

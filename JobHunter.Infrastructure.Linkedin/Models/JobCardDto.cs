@@ -9,4 +9,5 @@ public class JobCardDto
     public string? Url { get; set; }
     public DateTime PostedDate { get; set; }
     public string? EmploymentType { get; set; }
+    public string? Description { get; set; }
 }

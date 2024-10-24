@@ -39,8 +39,7 @@ var openAiConfigurations = new OpenAiConfigurations();
 builder.Configuration.GetSection(nameof(OpenAiConfigurations)).Bind(openAiConfigurations);
 
 builder.Services.AddCrawlerService()
-    .AddOpenAiService(openAiConfigurations)
-    .AddLinkedinHttpClient(linkedinConfiguration);
+    .AddOpenAiService(openAiConfigurations);
 
 var redisConfiguration = new RedisConfigurations();
 builder.Configuration.GetSection(nameof(RedisConfigurations)).Bind(redisConfiguration);
