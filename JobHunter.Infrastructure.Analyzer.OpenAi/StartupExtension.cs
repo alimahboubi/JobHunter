@@ -11,6 +11,7 @@ public static class StartupExtension
     public static IServiceCollection AddOpenAiService(this IServiceCollection services,
         OpenAiConfigurations configurations)
     {
+        AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
         OpenAIClient openAiClient = new(configurations.APIKey);
         services.AddSingleton(openAiClient);
         services.AddScoped<IJobAnalyzerService, GptJobDescriptionMatchAnalyzer>();

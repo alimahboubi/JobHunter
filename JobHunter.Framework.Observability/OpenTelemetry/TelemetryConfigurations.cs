@@ -50,6 +50,8 @@ public static class TelemetryConfigurations
                 metrics.AddConsoleExporter();
             }
 
+            metrics.AddMeter("OpenAI.*");
+
             if (metricConfig.OtlpExporterEndpoint is not null)
             {
                 metrics.AddOtlpExporter(o =>
@@ -93,12 +95,12 @@ public static class TelemetryConfigurations
                 {
                     opt.AddElasticsearchClientInstrumentation();
                 }
-                
+
                 if (tracingConfig.IsQuartzTraceEnabled)
                 {
                     opt.AddQuartzInstrumentation();
                 }
-                
+
                 if (tracingConfig.IsEntityFrameWorkTraceEnabled)
                 {
                     opt.AddEntityFrameworkCoreInstrumentation();
@@ -124,6 +126,8 @@ public static class TelemetryConfigurations
                             tracingConfig.SqlTracingConfig.EnableConnectionLevelAttributes;
                     });
                 }
+
+                opt.AddSource("OpenAI.*");
 
                 if (tracingConfig.OtlpExporterEndpoint is not null)
                 {

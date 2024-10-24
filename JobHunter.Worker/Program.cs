@@ -83,7 +83,7 @@ builder.Services.AddQuartz(q =>
         //This Cron interval can be described as "run every minute" (when second is zero)
         .WithSimpleSchedule(x => x
             .RepeatForever()
-            .WithIntervalInMinutes(backgroundJobConfigurations.CrawlerRepeatInterval)
+            .WithIntervalInMinutes(backgroundJobConfigurations.AnalyzerRepeatInterval)
         )
     );
 });

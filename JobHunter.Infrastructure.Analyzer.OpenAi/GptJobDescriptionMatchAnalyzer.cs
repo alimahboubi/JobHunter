@@ -1,15 +1,18 @@
 using JobHunter.Domain.Job.Exceptions;
 using JobHunter.Domain.Job.Services;
 using OpenAI.Chat;
+using OpenTelemetry.Trace;
 using OpenAIClient = OpenAI.OpenAIClient;
 
 namespace JobHunter.Infrastructure.Analyzer.OpenAi;
 
-public class GptJobDescriptionMatchAnalyzer(OpenAIClient openAiClient) : IJobAnalyzerService
+public class GptJobDescriptionMatchAnalyzer(OpenAIClient openAiClient, Tracer tracer) : IJobAnalyzerService
 {
     public async Task<float> AnalyzeJob(string jobTitle, string? jobDescription, string? resumePath,
         CancellationToken ct)
     {
+        using var span = tracer.StartActiveSpan("AnalyzeJob");
+        span.SetAttribute("job title", jobTitle);
         if (string.IsNullOrWhiteSpace(jobDescription)) throw new InvalidJobDescription();
         if (string.IsNullOrWhiteSpace(resumePath)) throw new InvalidFilePath();
         // Read the resume content from the file
@@ -26,7 +29,7 @@ public class GptJobDescriptionMatchAnalyzer(OpenAIClient openAiClient) : IJobAna
 
         var isFileExist = File.Exists(path);
         if (!isFileExist) throw new InvalidFilePath();
-        
+
         using var sr = new StreamReader(path);
         return sr.ReadToEnd();
     }

@@ -4,6 +4,7 @@ using JobHunter.Domain.Job.Exceptions;
 using JobHunter.Domain.Job.Repositories;
 using JobHunter.Domain.Job.Services;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Trace;
 
 namespace JobHunter.Application.Services;
 
@@ -12,27 +13,32 @@ public class JobAnalysisBackgroundService(
     IProceedJobCheckpointRepository proceedJobCheckpointRepository,
     ILogger<JobAnalysisBackgroundService> logger,
     IJobAnalyzerService jobAnalyzerService,
-    UsersConfigurations userConfigurations)
+    UsersConfigurations userConfigurations,
+    BackgroundJobConfigurations backgroundJobConfigurations,
+    Tracer tracer)
     : IJobAnalysisBackgroundService
 {
     private const string ServiceName = "OpenAIAnalyzer";
-    private const int JobCount = 10;
 
     public async Task Execute(CancellationToken cancellationToken)
     {
+        var currentSpan = Tracer.CurrentSpan;
         var latestCheckpoint = await GetLatestProceedJob(cancellationToken);
+        currentSpan.SetAttribute("Checkpoint", latestCheckpoint);
         try
         {
-            var jobs = await jobRepository.GetUnprocessedJobsAfterCheckpoint(JobCount, latestCheckpoint,
+            var jobs = await jobRepository.GetUnprocessedJobsAfterCheckpoint(backgroundJobConfigurations.AnalyzerCheckpointCount, latestCheckpoint,
                 cancellationToken);
             foreach (var job in jobs)
             {
-                await ProcessJob(latestCheckpoint, job, cancellationToken);
+                await ProcessJob(job, cancellationToken);
+                latestCheckpoint++;
             }
         }
         catch (Exception e)
         {
             logger.LogError(e, "Execute failed");
+            currentSpan.SetStatus(Status.Error);
         }
         finally
         {
@@ -46,28 +52,33 @@ public class JobAnalysisBackgroundService(
         return checkpoint?.Checkpoint ?? 0;
     }
 
-    private async Task ProcessJob(int latestCheckpoint, Job job, CancellationToken cancellationToken)
+    private async Task ProcessJob(Job job, CancellationToken cancellationToken)
     {
+        using var span = tracer.StartActiveSpan("ProcessJob");
         try
         {
             var userConfig = userConfigurations.Profiles.FirstOrDefault(e => e.Id == job.UserId);
             if (userConfig is null) return;
-
+            span.SetAttribute("Job Id", job.Id);
+            span.SetAttribute("Job title", job.Title);
             var result = await jobAnalyzerService.AnalyzeJob(job.Title, job.JobDescription,
                 userConfig.TextResumePath, cancellationToken);
             await UpdateJobs(job.Id, result, cancellationToken);
         }
-        catch (InvalidJobDescription)
+        catch (InvalidJobDescription ex)
         {
-            latestCheckpoint++;
+            span.SetStatus(Status.Error);
+            logger.LogError(ex, "invalid job description for fon id : {id}", job.Id);
         }
-        catch (InvalidFilePath)
+        catch (InvalidFilePath ex)
         {
-            latestCheckpoint++;
+            span.SetStatus(Status.Error);
+            logger.LogError(ex, "File path not found");
         }
-        catch (CalculateMatchPercentageException)
+        catch (CalculateMatchPercentageException ex)
         {
-            latestCheckpoint++;
+            span.SetStatus(Status.Error);
+            logger.LogError(ex, "{id}", job.Id);
         }
     }
 
