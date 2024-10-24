@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using OpenTelemetry.Trace;
 using System.Text.RegularExpressions;
+using JobUrlException = JobHunter.Infrastructure.Linkedin.Exceptions.JobUrlException;
 
 namespace JobHunter.Infrastructure.Linkedin;
 
@@ -16,7 +17,7 @@ public class JobSearchCrawler(
     Tracer tracer)
 {
     private const int MaxRetries = 3;
-    private const int DelayMilliseconds = 1000;
+    private const int DelayMilliseconds = 3000;
 
     public async Task<List<JobCardDto>> SearchJobResultsAsync(
         IPage page,
@@ -60,7 +61,7 @@ public class JobSearchCrawler(
         {
             try
             {
-                await NavigateToPageAsync(page, url, ct);
+                await NavigateToPageAsync(page, url);
                 span.SetStatus(Status.Ok);
                 return;
             }
@@ -82,11 +83,11 @@ public class JobSearchCrawler(
         }
     }
 
-    private async Task NavigateToPageAsync(IPage page, string url, CancellationToken ct)
+    private async Task NavigateToPageAsync(IPage page, string url)
     {
         await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.Load });
         await page.WaitForSelectorAsync(PageNodes.JobListNode,
-            new PageWaitForSelectorOptions { Timeout = DelayMilliseconds });
+            new PageWaitForSelectorOptions());
     }
 
     private async Task<List<JobCardDto>> ExtractSearchResultsAsync(IPage page)
@@ -97,20 +98,26 @@ public class JobSearchCrawler(
 
         foreach (var element in jobElements)
         {
-            var url = await FindCardUrlAsync(element);
-            var id = ExtractJobIdFromUrl(url);
-
-            if (IsJobAlreadyCached(id))
-            {
-                logger.LogInformation("Job with ID {Id} is already cached.", id);
-                continue;
-            }
-
+            string id = string.Empty;
             try
             {
+                var url = await FindCardUrlAsync(element);
+               id= ExtractJobIdFromUrl(url);
+
+                if (IsJobAlreadyCached(id))
+                {
+                    logger.LogInformation("Job with ID {Id} is already cached.", id);
+                    continue;
+                }
+
+
                 var job = await ParseJobDetailAsync(page, element, id, url);
                 searchResults.Add(job);
                 cacheService.Set(id, job, TimeSpan.FromDays(1));
+            }
+            catch (JobUrlException ex)
+            {
+                logger.LogError(ex,"Job URL failed");
             }
             catch (Exception ex)
             {
@@ -133,7 +140,7 @@ public class JobSearchCrawler(
             Location = await ParseCardItemAsync(element, PageNodes.LocationNode),
             Url = url,
             PostedDate = await ParsePostedDateAsync(element),
-            Description = await ExtractJobDescriptionAsync(page)
+            Description = description
         };
 
         return jobCardDto;
@@ -187,13 +194,13 @@ public class JobSearchCrawler(
         var node = await element.QuerySelectorAsync(PageNodes.JobUrlNode);
         if (node == null)
         {
-            throw new Exception("Job URL node not found.");
+            throw new JobUrlException();
         }
 
         var href = await node.GetAttributeAsync("href");
         if (string.IsNullOrWhiteSpace(href))
         {
-            throw new Exception("Job URL not found.");
+            throw new JobUrlException();
         }
 
         var url = href.Split('?')[0];
