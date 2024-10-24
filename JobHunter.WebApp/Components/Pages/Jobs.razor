@@ -16,7 +16,7 @@
     <Column Title="Url" @bind-Field="@context.Url">
         <a href="@context.Url" target="_blank">link</a>
     </Column>
-    <PropertyColumn Property="c => c.PostedDate"/>
+    <PropertyColumn Property="c => c.PostedDate" Sortable/>
     <Column Title="IsApplied" @bind-Field="@context.IsApplied" Sortable Filterable>
         <Switch Checked="@context.IsApplied" OnChange="async (b) => { await CheckedChanged(context.Id, b); }"></Switch>
     </Column>
