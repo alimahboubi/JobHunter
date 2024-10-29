@@ -31,11 +31,6 @@ JobHunter is a job search and management tool designed to streamline the process
    docker-compose up -d
    ```
 
-4. **Run the Application**:
-   ```bash
-   dotnet run --project JobHunter.WebApp
-   ```
-
 ## Usage
 
 - **Login/Register**: Create an account or log in to access your dashboard.
