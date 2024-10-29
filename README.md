@@ -21,9 +21,9 @@ JobHunter is a job search and management tool designed to streamline the process
 
 2. **Set Up Environment Variables**: Create a `.env` file and configure it as follows:
    ```
-   DATABASE_URL=postgres://user:password@localhost:5432/jobhunter
-   REDIS_URL=redis://localhost:6379
-   OPENAI_API_KEY=your_openai_api_key
+   DB_CONNECTION_STRING="Host=localhost;Port=5432;Username=postgres;Password=Pa33word_123;Database=JobHunter"
+   OPENAI_CONFIGURATION_API_KEY=<APIKeYy>
+   USERS_CONFIGURATION_PATH="<file path of user configuration>"
    ```
 
 3. **Install Dependencies**: Install the necessary dependencies using Docker.
