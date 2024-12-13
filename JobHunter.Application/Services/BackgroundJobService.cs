@@ -1,78 +1,63 @@
-using System.Text.Json;
 using JobHunter.Domain.Job.Configurations;
 using JobHunter.Domain.Job.Dto;
-using JobHunter.Domain.Job.Entities;
 using JobHunter.Domain.Job.Enums;
-using JobHunter.Domain.Job.Repositories;
 using JobHunter.Domain.Job.Services;
+using JobHunter.Domain.User.Entities;
+using JobHunter.Domain.User.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace JobHunter.Application.Services;
 
 public class BackgroundJobService(
-    IJobRepository jobRepository,
+    IJobService jobService,
+    IUserRepository userRepository,
     ILogger<BackgroundJobService> logger,
-    IJobCrawlerService jobCrawlerService,
-    UsersConfigurations userConfigurations)
+    IJobCrawlerService jobCrawlerService)
     : IBackgroundJobService
 {
     public async Task Execute(CancellationToken cancellationToken)
     {
-        foreach (var userConfiguration in userConfigurations.Profiles)
+        var users = await GetActiveUsers(cancellationToken);
+        foreach (var user in users)
         {
-            if (!userConfiguration.IsEnabled)
-                continue;
             try
             {
-                var isJobTypeParsed =
-                    Enum.TryParse<JobCategory>(userConfiguration.JobTargetSettings.JobCategory, out var jobType);
-                var targetPosition = new TargetPositionDto
-                {
-                    Username = userConfiguration.Username,
-                    Password = userConfiguration.Password,
-                    JobTitle = userConfiguration.JobTargetSettings.JobTitle,
-                    TargetLocations = userConfiguration.JobTargetSettings.TargetLocations,
-                    TargetKeywords = userConfiguration.JobTargetSettings.TargetKeywords,
-                    MustHaveKeywords = userConfiguration.JobTargetSettings.MustHaveKeywords,
-                    JobCategory = isJobTypeParsed ? jobType : JobCategory.None
-                };
-                var jobs = await jobCrawlerService.GetJobPositions(targetPosition, cancellationToken);
-                await SaveJobsToDb(jobs, userConfiguration.Id, cancellationToken);
+                await ProcessUserConfiguration(user, cancellationToken);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                logger.LogError(e, "Error while processing user name : {Name} Id : {Id}", user.Name, user.Id);
             }
         }
     }
 
+    private async Task ProcessUserConfiguration(User user, CancellationToken cancellationToken)
+    {
+        var targetPosition = CreateTargetPosition(user);
+        var jobs = await jobCrawlerService.GetJobPositions(targetPosition, cancellationToken);
+        await SaveJobsToDb(jobs, user.Id, cancellationToken);
+    }
+
+    private TargetPositionDto CreateTargetPosition(User user)
+    {
+        var isJobTypeParsed = Enum.TryParse<JobCategory>(user.JobTarget.JobCategory, out var jobType);
+        return new TargetPositionDto
+        {
+            JobTitle = user.JobTarget.JobTitle,
+            TargetLocations = user.JobTarget.TargetLocations,
+            TargetKeywords = user.JobTarget.TargetKeywords,
+            MustHaveKeywords = user.JobTarget.EssentialKeywords,
+            JobCategory = isJobTypeParsed ? jobType : JobCategory.None
+        };
+    }
+
     private async Task SaveJobsToDb(List<JobResultDto> jobs, Guid userId, CancellationToken ct)
     {
-        foreach (var job in jobs)
-        {
-            var isDuplicatedJob = await jobRepository.IsJobExistAsync(job.Id, ct);
-            if (isDuplicatedJob)
-                continue;
+        await jobService.AddJobs(jobs, userId, ct);
+    }
 
-            var keywords = JsonSerializer.Serialize(job.Keywords);
-            var jobEntity = new Job
-            {
-                UserId = userId,
-                Source = "Linkedin",
-                SourceId = job.Id,
-                Title = job.Title,
-                Company = job.Company,
-                Location = job.Location,
-                Url = job.Url,
-                PostedDate = job.PostedDate,
-                EmploymentType = job.EmploymentType,
-                LocationType = job.LocationType,
-                NumberOfEmployees = job.NumberOfEmployees,
-                JobDescription = job.JobDescription,
-                Keywords = keywords
-            };
-            await jobRepository.AddAsync(jobEntity, ct);
-        }
+    private async Task<List<User>> GetActiveUsers(CancellationToken ct)
+    {
+        return await userRepository.GetActiveUsersAsync(ct);
     }
 }

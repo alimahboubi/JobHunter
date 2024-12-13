@@ -1,4 +1,6 @@
+using System.Text.Json;
 using JobHunter.Domain.Job.Dto;
+using JobHunter.Domain.Job.Entities;
 using JobHunter.Domain.Job.Repositories;
 using JobHunter.Domain.Job.Services;
 
@@ -38,5 +40,34 @@ public class JobService(IJobRepository jobRepository) : IJobService
     public async Task<bool> UpdateAppliedState(int id, bool state, CancellationToken ct)
     {
         return await jobRepository.UpdateAppliedState(id, state, ct);
+    }
+
+    public async Task AddJobs(List<JobResultDto> jobs, Guid userId, CancellationToken ct)
+    {
+        foreach (var job in jobs)
+        {
+            var isDuplicatedJob = await jobRepository.IsJobExistAsync(job.Id, ct);
+            if (isDuplicatedJob)
+                continue;
+
+            var keywords = JsonSerializer.Serialize(job.Keywords);
+            var jobEntity = new Job
+            {
+                UserId = userId,
+                Source = "Linkedin",
+                SourceId = job.Id,
+                Title = job.Title,
+                Company = job.Company,
+                Location = job.Location,
+                Url = job.Url,
+                PostedDate = job.PostedDate,
+                EmploymentType = job.EmploymentType,
+                LocationType = job.LocationType,
+                NumberOfEmployees = job.NumberOfEmployees,
+                JobDescription = job.JobDescription,
+                Keywords = keywords
+            };
+            await jobRepository.AddAsync(jobEntity, ct);
+        }
     }
 }

@@ -13,7 +13,8 @@ builder.Services.AddAntDesign();
 var connectionString = builder.Configuration.GetConnectionString("JobHunter");
 builder.Services.AddRepositories()
     .AddJobHunterDbContext(connectionString)
-    .AddServices();
+    .AddServices()
+    .AddAutoMapperService();
 
 var app = builder.Build();
 

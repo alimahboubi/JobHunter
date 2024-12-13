@@ -8,32 +8,18 @@ namespace JobHunter.Infrastructure.Analyzer.OpenAi;
 
 public class GptJobDescriptionMatchAnalyzer(OpenAIClient openAiClient, Tracer tracer) : IJobAnalyzerService
 {
-    public async Task<float> AnalyzeJob(string jobTitle, string? jobDescription, string? resumePath,
+    public async Task<float> AnalyzeJob(string jobTitle, string? jobDescription, string? resumeContent,
         CancellationToken ct)
     {
         using var span = tracer.StartActiveSpan("AnalyzeJob");
         span.SetAttribute("job title", jobTitle);
         if (string.IsNullOrWhiteSpace(jobDescription)) throw new InvalidJobDescription();
-        if (string.IsNullOrWhiteSpace(resumePath)) throw new InvalidFilePath();
-        // Read the resume content from the file
-        string resumeContent = GetResumeContent(resumePath);
+        if (string.IsNullOrWhiteSpace(resumeContent)) throw new Invalidresume();
 
         // Calculate the match percentage
         return await CalculateMatchPercentageByGpt(jobTitle, jobDescription, resumeContent, ct);
     }
-
-
-    private string GetResumeContent(string resumePath)
-    {
-        var path = Path.GetFullPath(resumePath);
-
-        var isFileExist = File.Exists(path);
-        if (!isFileExist) throw new InvalidFilePath();
-
-        using var sr = new StreamReader(path);
-        return sr.ReadToEnd();
-    }
-
+    
     private async Task<float> CalculateMatchPercentageByGpt(string jobTitle, string jobDescription,
         string resumeContent,
         CancellationToken ct)

@@ -1,0 +1,76 @@
+@page "/users/add"
+
+@using JobHunter.Domain.User.Dtos
+
+<Form TModel="GetUserResponseDto"
+      Model="@_userModel"
+      LabelColSpan="4"
+      WrapperColSpan="16"
+      Loading="isLoading">
+    <FormItem Label="Name">
+        <Input @bind-Value="@context.Name"/>
+    </FormItem>
+    <FormItem Label="Resume">
+        <TextArea @bind-Value="@context.Resume" />
+    </FormItem>
+    <FormItem Label="Enabled">
+        <Switch @bind-Value="@context.IsEnabled"/>
+    </FormItem>
+    <FormItem Label="Target Job Title">
+        <Input @bind-Value="@context.TargetJobTitle"/>
+    </FormItem>
+    <FormItem Label="Target Job Category">
+        <Input @bind-Value="@context.TargetJobCategory"/>
+    </FormItem>
+    <FormItem Label="Location">
+        @foreach (var item in _locationTagCollection.lstTags)
+        {
+            <Tag @key="item" Closable OnClose="() => _locationTagCollection.OnRemove(item)">@item</Tag>
+        }
+        @if (_locationTagCollection.inputVisible)
+        {
+            <Input @ref="_locationTagCollection._inputRef" Style="width: 78px" Size="small" @bind-Value="_locationTagCollection._inputValue" OnBlur="_locationTagCollection.HandleInputConfirm" OnPressEnter="_locationTagCollection.HandleInputConfirm" AutoFocus/>
+        }
+        else
+        {
+            <Tag Class="site-tag-plus" OnClick="@(() => _locationTagCollection.inputVisible = !_locationTagCollection.inputVisible)">
+                <Icon Type="plus"/>New Location
+            </Tag>
+        }
+    </FormItem>
+    <FormItem Label="Keyword">
+        @foreach (var item in _keywordTagCollection.lstTags)
+        {
+            <Tag @key="item" Closable OnClose="() => _keywordTagCollection.OnRemove(item)">@item</Tag>
+        }
+        @if (_keywordTagCollection.inputVisible)
+        {
+            <Input @ref="_keywordTagCollection._inputRef" Style="width: 78px" Size="small" @bind-Value="_keywordTagCollection._inputValue" OnBlur="_keywordTagCollection.HandleInputConfirm" OnPressEnter="_keywordTagCollection.HandleInputConfirm" AutoFocus/>
+        }
+        else
+        {
+            <Tag Class="site-tag-plus" OnClick="@(() => _keywordTagCollection.inputVisible = !_keywordTagCollection.inputVisible)">
+                <Icon Type="plus"/>New Keyword
+            </Tag>
+        }
+    </FormItem>
+    <FormItem Label="Essential Keyword">
+        @foreach (var item in _essentialKeywordTagCollection.lstTags)
+        {
+            <Tag @key="item" Closable OnClose="() => _essentialKeywordTagCollection.OnRemove(item)">@item</Tag>
+        }
+        @if (_essentialKeywordTagCollection.inputVisible)
+        {
+            <Input @ref="_essentialKeywordTagCollection._inputRef" Style="width: 78px" Size="small" @bind-Value="_essentialKeywordTagCollection._inputValue" OnBlur="_essentialKeywordTagCollection.HandleInputConfirm" OnPressEnter="_essentialKeywordTagCollection.HandleInputConfirm" AutoFocus/>
+        }
+        else
+        {
+            <Tag Class="site-tag-plus" OnClick="@(() => _essentialKeywordTagCollection.inputVisible = !_essentialKeywordTagCollection.inputVisible)">
+                <Icon Type="plus"/>New Essential Keyword
+            </Tag>
+        }
+    </FormItem>
+    <FormItem>
+        <Button OnClick="Save">Save</Button>
+    </FormItem>
+</Form>
