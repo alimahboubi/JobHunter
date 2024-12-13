@@ -7,7 +7,7 @@
                  DataSource="@ResponseDto.Data"
                  RemoteDataSource
                  TItem="GetPaginatedJobResponseDto"
-                 OnChange=@OnChange
+                 OnChange="@OnChange"
                  @ref="_table">
     <PropertyColumn Property="c => c.Id" Sortable/>
     <PropertyColumn Property="c => c.Title"/>

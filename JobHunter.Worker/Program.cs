@@ -1,3 +1,4 @@
+using JobHunter.Application;
 using JobHunter.Infrastructure.Persistent.Postgres;
 using JobHunter.Application.Services;
 using JobHunter.Domain.Job.Configurations;
@@ -28,9 +29,6 @@ var backgroundJobConfigurations = new BackgroundJobConfigurations();
 builder.Configuration.GetSection(nameof(BackgroundJobConfigurations)).Bind(backgroundJobConfigurations);
 builder.Services.AddSingleton(backgroundJobConfigurations);
 
-var configFilePath = builder.Configuration.GetValue<string>("UsersConfigurationsPath");
-builder.Services.AddUserConfigurations(configFilePath);
-
 var playwrightConfigurations = new PlaywrightConfigurations();
 builder.Configuration.GetSection(nameof(PlaywrightConfigurations)).Bind(playwrightConfigurations);
 builder.Services.AddSingleton(playwrightConfigurations);
@@ -39,7 +37,8 @@ var openAiConfigurations = new OpenAiConfigurations();
 builder.Configuration.GetSection(nameof(OpenAiConfigurations)).Bind(openAiConfigurations);
 
 builder.Services.AddCrawlerService()
-    .AddOpenAiService(openAiConfigurations);
+    .AddOpenAiService(openAiConfigurations)
+    .AddAutoMapperService();
 
 var redisConfiguration = new RedisConfigurations();
 builder.Configuration.GetSection(nameof(RedisConfigurations)).Bind(redisConfiguration);
@@ -47,6 +46,7 @@ builder.Services.AddRedisCache(redisConfiguration);
 
 var connectionString = builder.Configuration.GetConnectionString("JobHunter");
 builder.Services.AddRepositories()
+    .AddServices()
     .AddJobHunterDbContext(connectionString);
 
 builder.Services.AddScoped<IBackgroundJobService, BackgroundJobService>();

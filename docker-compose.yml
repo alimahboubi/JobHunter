@@ -10,10 +10,8 @@
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__JobHunter=${DB_CONNECTION_STRING}
       - OpenAiConfigurations__APIKey=${OPENAI_CONFIGURATION_API_KEY}
-      - UsersConfigurationsPath=${USERS_CONFIGURATION_PATH}
-    volumes:
-      - /sample/path/UserConfigurations.json:/app/UserConfigurations/UsersConfigurations.json
-      - /sample/path/resume.txt:/app/UserConfigurations/resume.txt
+      - LinkedinConfiguration__Username=${LINKEDIN_USERNAME}
+      - LinkedinConfiguration__Password=${LINKEDIN_PASSWORD}
     networks:
       - microservices_net
         

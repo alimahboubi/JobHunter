@@ -3,6 +3,8 @@ using JobHunter.Domain.Job.Entities;
 using JobHunter.Domain.Job.Exceptions;
 using JobHunter.Domain.Job.Repositories;
 using JobHunter.Domain.Job.Services;
+using JobHunter.Domain.User.Entities;
+using JobHunter.Domain.User.Repositories;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
 
@@ -13,7 +15,7 @@ public class JobAnalysisBackgroundService(
     IProceedJobCheckpointRepository proceedJobCheckpointRepository,
     ILogger<JobAnalysisBackgroundService> logger,
     IJobAnalyzerService jobAnalyzerService,
-    UsersConfigurations userConfigurations,
+    IUserRepository userRepository,
     BackgroundJobConfigurations backgroundJobConfigurations,
     Tracer tracer)
     : IJobAnalysisBackgroundService
@@ -27,11 +29,13 @@ public class JobAnalysisBackgroundService(
         currentSpan.SetAttribute("Checkpoint", latestCheckpoint);
         try
         {
-            var jobs = await jobRepository.GetUnprocessedJobsAfterCheckpoint(backgroundJobConfigurations.AnalyzerCheckpointCount, latestCheckpoint,
+            var jobs = await jobRepository.GetUnprocessedJobsAfterCheckpoint(
+                backgroundJobConfigurations.AnalyzerCheckpointCount, latestCheckpoint,
                 cancellationToken);
+            var users = await userRepository.GetUsersAsync(cancellationToken);
             foreach (var job in jobs)
             {
-                await ProcessJob(job, cancellationToken);
+                await ProcessJob(users,job, cancellationToken);
                 latestCheckpoint++;
             }
         }
@@ -52,17 +56,17 @@ public class JobAnalysisBackgroundService(
         return checkpoint?.Checkpoint ?? 0;
     }
 
-    private async Task ProcessJob(Job job, CancellationToken cancellationToken)
+    private async Task ProcessJob(List<User> users, Job job, CancellationToken cancellationToken)
     {
         using var span = tracer.StartActiveSpan("ProcessJob");
         try
         {
-            var userConfig = userConfigurations.Profiles.FirstOrDefault(e => e.Id == job.UserId);
+            var userConfig = users.FirstOrDefault(e => e.Id == job.UserId);
             if (userConfig is null) return;
             span.SetAttribute("Job Id", job.Id);
             span.SetAttribute("Job title", job.Title);
             var result = await jobAnalyzerService.AnalyzeJob(job.Title, job.JobDescription,
-                userConfig.TextResumePath, cancellationToken);
+                userConfig.Resume, cancellationToken);
             await UpdateJobs(job.Id, result, cancellationToken);
         }
         catch (InvalidJobDescription ex)
@@ -70,7 +74,7 @@ public class JobAnalysisBackgroundService(
             span.SetStatus(Status.Error);
             logger.LogError(ex, "invalid job description for fon id : {id}", job.Id);
         }
-        catch (InvalidFilePath ex)
+        catch (Invalidresume ex)
         {
             span.SetStatus(Status.Error);
             logger.LogError(ex, "File path not found");

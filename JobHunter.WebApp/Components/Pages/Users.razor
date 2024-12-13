@@ -1,0 +1,20 @@
+@page "/users"
+@using JobHunter.Domain.User.Dtos
+
+<Button OnClick="@OnClickAddUser" Style="margin: 10px">Add</Button>
+<AntDesign.Table @bind-PageIndex="@_pageIndex"
+                 @bind-PageSize="@_pageSize"
+                 @bind-Total="ResponseDto.TotalItems"
+                 DataSource="@ResponseDto.Data"
+                 RemoteDataSource
+                 TItem="GetPaginatedUserResponseDto"
+                 OnChange="@OnChange"
+                 @ref="_table">
+    <PropertyColumn Property="c => c.Id" Sortable/>
+    <PropertyColumn Property="c => c.Name"/>
+    <PropertyColumn Property="c => c.LastModificationDateTime"/>
+
+    <ActionColumn Title="Action">
+        <Button OnClick="() => { EditItem(context.Id); }" Style="color: red">Edit</Button>
+    </ActionColumn>
+</AntDesign.Table>

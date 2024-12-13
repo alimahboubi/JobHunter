@@ -14,6 +14,7 @@ public class JobCrawlerService(
     JobSearchCrawler jobSearchCrawler,
     ILogger<JobCrawlerService> logger,
     Tracer tracer,
+    LinkedinConfiguration linkedinConfiguration,
     PlaywrightConfigurations playwrightConfigurations) : IJobCrawlerService
 {
     private IPage? _page;
@@ -22,7 +23,7 @@ public class JobCrawlerService(
         CancellationToken ct = default)
     {
         await InitializePlaywright();
-        await LoginAsync(targetPositionDto.Username, targetPositionDto.Password);
+        await LoginAsync();
 
         var results = new List<JobResultDto>();
         foreach (var location in targetPositionDto.TargetLocations)
@@ -88,7 +89,7 @@ public class JobCrawlerService(
         _page = await browser.NewPageAsync();
     }
 
-    private async Task LoginAsync(string username, string password)
+    private async Task LoginAsync()
     {
         logger.LogInformation("Start login");
         var responsePage = await _page.GotoAsync("https://www.linkedin.com/login");
@@ -108,8 +109,8 @@ public class JobCrawlerService(
         await _page.WaitForSelectorAsync(".login__form");
 
         // Fill out the login form
-        await _page.FillAsync("input#username", username);
-        await _page.FillAsync("input#password", password);
+        await _page.FillAsync("input#username", linkedinConfiguration.Username);
+        await _page.FillAsync("input#password", linkedinConfiguration.Password);
 
         // Click the login button
         await _page.ClickAsync("button[type='submit']");
