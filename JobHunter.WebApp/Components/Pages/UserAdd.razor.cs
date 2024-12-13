@@ -40,6 +40,7 @@ partial class UserAdd
             _userModel.TargetJobTitle,
             _userModel.TargetJobCategory,
             _locationTagCollection.lstTags,
+            _userModel.TargetWorkTypes,
             _keywordTagCollection.lstTags,
             _essentialKeywordTagCollection.lstTags);
         var result = await userService.AddUser(toBeCreatedUseer, default);
@@ -48,5 +49,10 @@ partial class UserAdd
         {
             NavigationManager.NavigateTo("/users");
         }
+    }
+    
+    void OnChangeCheckbox(string[] checkedValues)
+    {
+        _userModel.TargetWorkTypes = checkedValues.ToList();
     }
 }

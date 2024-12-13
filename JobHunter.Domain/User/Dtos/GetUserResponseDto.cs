@@ -9,6 +9,7 @@ public record GetUserResponseDto
     public string TargetJobTitle { get; set; }
     public string TargetJobCategory { get; set; }
     public List<string> TargetJobLocations { get; set; }
+    public List<string> TargetWorkTypes { get; set; }
     public List<string> TargetJobKeywords { get; set; }
     public List<string> TargetJobEssentialKeywords { get; set; }
     public DateTime LastModificationDateTime { get; set; }

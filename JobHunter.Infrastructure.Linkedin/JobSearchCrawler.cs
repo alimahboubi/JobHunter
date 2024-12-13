@@ -19,11 +19,11 @@ public class JobSearchCrawler(
     private const int MaxRetries = 3;
     private const int DelayMilliseconds = 3000;
 
-    public async Task<List<JobCardDto>> SearchJobResultsAsync(
-        IPage page,
+    public async Task<List<JobCardDto>> SearchJobResultsAsync(IPage page,
         string location,
         string positionName,
         List<string> searchKeywords,
+        List<string> workTypes,
         CancellationToken ct = default)
     {
         if (page == null) throw new ArgumentNullException(nameof(page));
@@ -35,7 +35,7 @@ public class JobSearchCrawler(
 
         try
         {
-            await FetchJobSearchPageContentAsync(page, location, positionName, searchKeywords, ct);
+            await FetchJobSearchPageContentAsync(page, location, positionName, searchKeywords, workTypes, ct);
             return await ExtractSearchResultsAsync(page);
         }
         catch (Exception ex)
@@ -50,10 +50,11 @@ public class JobSearchCrawler(
         string location,
         string positionName,
         List<string> searchKeywords,
+        List<string> workTypes,
         CancellationToken ct)
     {
         using var span = tracer.StartActiveSpan(nameof(FetchJobSearchPageContentAsync));
-        var searchQuery = CreateSearchQuery(location, positionName, searchKeywords);
+        var searchQuery = CreateSearchQuery(location, positionName, searchKeywords, workTypes);
         var url = $"{linkedinConfiguration.JobSearchBaseUrl}?{searchQuery}";
 
         int retries = 0;
@@ -102,7 +103,7 @@ public class JobSearchCrawler(
             try
             {
                 var url = await FindCardUrlAsync(element);
-               id= ExtractJobIdFromUrl(url);
+                id = ExtractJobIdFromUrl(url);
 
                 if (IsJobAlreadyCached(id))
                 {
@@ -117,7 +118,7 @@ public class JobSearchCrawler(
             }
             catch (JobUrlException ex)
             {
-                logger.LogError(ex,"Job URL failed");
+                logger.LogError(ex, "Job URL failed");
             }
             catch (Exception ex)
             {
@@ -247,10 +248,12 @@ public class JobSearchCrawler(
         return segments.LastOrDefault() ?? string.Empty;
     }
 
-    private string CreateSearchQuery(string location, string positionName, List<string> searchKeywords)
+    private string CreateSearchQuery(string location, string positionName, List<string> searchKeywords,
+        List<string> workTypes)
     {
         var queryString = System.Web.HttpUtility.ParseQueryString(string.Empty);
         queryString["f_TPR"] = $"r{linkedinConfiguration.TimeIntervalSeconds}";
+        queryString["f_WT"] = string.Join(",", workTypes);
         queryString["location"] = location;
         var keywordsString = $"&keywords={CreateKeywordQuery(positionName, searchKeywords)}";
         return queryString + keywordsString;

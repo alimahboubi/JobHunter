@@ -29,7 +29,7 @@ public class JobCrawlerService(
         foreach (var location in targetPositionDto.TargetLocations)
         {
             var fetchedJob = await GetJobsForLocationAsync(location, targetPositionDto.JobTitle,
-                targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, ct);
+                targetPositionDto.TargetKeywords, targetPositionDto.MustHaveKeywords, targetPositionDto.TargetWorkTypes,ct);
             results.AddRange(fetchedJob);
         }
 
@@ -37,14 +37,14 @@ public class JobCrawlerService(
     }
 
     private async Task<List<JobResultDto>> GetJobsForLocationAsync(string location, string positionName,
-        List<string> keywords, List<string> criticalKeywords, CancellationToken ct)
+        List<string> keywords, List<string> criticalKeywords, List<string> workTypes, CancellationToken ct)
     {
         using var jobLocationSpan = tracer.StartActiveSpan("GetJobsForLocationAsync");
         jobLocationSpan.SetAttribute("Location", location);
         var jobResults = new List<JobResultDto>();
         try
         {
-            var jobs = await jobSearchCrawler.SearchJobResultsAsync(_page, location, positionName, keywords, ct);
+            var jobs = await jobSearchCrawler.SearchJobResultsAsync(_page, location, positionName, keywords,workTypes, ct);
 
             if (!jobs.Any())
                 return jobResults;

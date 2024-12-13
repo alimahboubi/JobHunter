@@ -7,5 +7,6 @@ public record CreateUserRequestDto(
     string TargetJobTitle,
     string TargetJobCategory,
     List<string> TargetJobLocations,
+    List<string> TargetWorkTypes,
     List<string> TargetJobKeywords,
     List<string> TargetJobEssentialKeywords);

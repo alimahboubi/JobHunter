@@ -22,6 +22,22 @@
     <FormItem Label="Target Job Category">
         <Input @bind-Value="@context.TargetJobCategory"/>
     </FormItem>
+    <FormItem Label="Target Work types">
+        <CheckboxGroup Style="width:100%" TValue="string" ValueChanged="@OnChangeCheckbox">
+            <GridRow>
+                <GridCol Span="8">
+                    <Checkbox Label="1" Checked="@_userModel.TargetWorkTypes.Any(e=>e=="1")">On-site</Checkbox>
+                </GridCol>
+                <GridCol Span="8">
+                    <Checkbox Label="2"Checked="@_userModel.TargetWorkTypes.Any(e=>e=="2")">Remote</Checkbox>
+                </GridCol>
+                <GridCol Span="8">
+                    <Checkbox Label="3" Checked="@_userModel.TargetWorkTypes.Any(e=>e=="3")">Hybrid</Checkbox>
+                </GridCol>
+
+            </GridRow>
+        </CheckboxGroup>
+    </FormItem>
     <FormItem Label="Location">
         @foreach (var item in _locationTagCollection.lstTags)
         {

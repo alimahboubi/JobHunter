@@ -18,6 +18,7 @@ public class UserMappingProfile : Profile
                 JobTitle = o.TargetJobTitle,
                 JobCategory = o.TargetJobCategory,
                 TargetLocations = o.TargetJobLocations,
+                TargetWorkTypes = o.TargetWorkTypes,
                 TargetKeywords = o.TargetJobKeywords,
                 EssentialKeywords = o.TargetJobEssentialKeywords
             }));
@@ -29,6 +30,7 @@ public class UserMappingProfile : Profile
                 JobTitle = o.TargetJobTitle,
                 JobCategory = o.TargetJobCategory,
                 TargetLocations = o.TargetJobLocations,
+                TargetWorkTypes = o.TargetWorkTypes,
                 TargetKeywords = o.TargetJobKeywords,
                 EssentialKeywords = o.TargetJobEssentialKeywords
             }));
@@ -36,6 +38,7 @@ public class UserMappingProfile : Profile
             .ForMember(e => e.TargetJobTitle, opt => opt.MapFrom(o => o.JobTarget.JobTitle))
             .ForMember(e => e.TargetJobCategory, opt => opt.MapFrom(o => o.JobTarget.JobCategory))
             .ForMember(e => e.TargetJobLocations, opt => opt.MapFrom(o => o.JobTarget.TargetLocations))
+            .ForMember(e => e.TargetWorkTypes, opt => opt.MapFrom(o => o.JobTarget.TargetWorkTypes))
             .ForMember(e => e.TargetJobKeywords, opt => opt.MapFrom(o => o.JobTarget.TargetKeywords))
             .ForMember(e => e.TargetJobEssentialKeywords, opt => opt.MapFrom(o => o.JobTarget.EssentialKeywords));
         CreateMap<User, GetPaginatedUserResponseDto>();

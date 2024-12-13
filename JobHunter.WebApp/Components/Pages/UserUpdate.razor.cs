@@ -26,7 +26,10 @@ partial class UserUpdate
     public Guid Id { get; set; }
 
 
-    private GetUserResponseDto _userModel { get; set; } = new();
+    private GetUserResponseDto _userModel { get; set; } = new()
+    {
+        TargetWorkTypes = new()
+    };
     private bool isLoading;
     private DynamicTagCollection _locationTagCollection = new(new());
     private DynamicTagCollection _keywordTagCollection = new(new());
@@ -69,6 +72,7 @@ partial class UserUpdate
             _userModel.TargetJobTitle,
             _userModel.TargetJobCategory,
             _userModel.TargetJobLocations,
+            _userModel.TargetWorkTypes,
             _userModel.TargetJobKeywords,
             _userModel.TargetJobEssentialKeywords);
         var result = await userService.UpdateUser(toBeUpdated, default);
@@ -89,5 +93,10 @@ partial class UserUpdate
         {
             NavigationManager.NavigateTo("/users");
         }
+    }
+    
+    void OnChangeCheckbox(string[] checkedValues)
+    {
+        _userModel.TargetWorkTypes = checkedValues.ToList();
     }
 }
