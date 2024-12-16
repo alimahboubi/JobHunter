@@ -47,7 +47,8 @@ public class BackgroundJobService(
             TargetLocations = user.JobTarget.TargetLocations,
             TargetKeywords = user.JobTarget.TargetKeywords,
             MustHaveKeywords = user.JobTarget.EssentialKeywords,
-            JobCategory = isJobTypeParsed ? jobType : JobCategory.None
+            JobCategory = isJobTypeParsed ? jobType : JobCategory.None,
+            TargetWorkTypes = user.JobTarget.TargetWorkTypes
         };
     }
 
